@@ -862,8 +862,37 @@ function renderKpiCards(filtered, f, fullDataInSeason){
 }
 
 /* ============ TABLE ============ */
+/* ============ MEDALLAS (mejores marcas por columna) ============ */
+const MEDAL_COLS = [
+  {key:'Distancia', dir:'max'},
+  {key:'HSR', dir:'max'},
+  {key:'EsfExpl', dir:'max'},
+  {key:'BiG', dir:'min'},
+  {key:'Contactos', dir:'max'},
+  {key:'MaxVel', dir:'max'},
+  {key:'Indice', dir:'max'}
+];
+const MEDAL_ICONS = ['\ud83e\udd47','\ud83e\udd48','\ud83e\udd49'];
+
+function computeMedals(rows){
+  const map = {};
+  if(!rows.length) return map;
+  MEDAL_COLS.forEach(mc=>{
+    const sorted = rows.slice().sort((a,b)=> mc.dir==='max' ? b[mc.key]-a[mc.key] : a[mc.key]-b[mc.key]);
+    sorted.slice(0,3).forEach((r,i)=>{
+      if(!map[r.__id]) map[r.__id] = {};
+      map[r.__id][mc.key] = MEDAL_ICONS[i];
+    });
+  });
+  return map;
+}
+function medalSpan(medal){
+  return medal ? ` <span title="Una de las 3 mejores marcas de esta metrica, dentro de la seleccion actual">${medal}</span>` : '';
+}
+
 function renderTable(filtered){
   const sorted = filtered.slice().sort((a,b)=> new Date(b.Fecha)-new Date(a.Fecha));
+  const medals = computeMedals(filtered);
   const totalPages = Math.max(1, Math.ceil(sorted.length/ROWS_PER_PAGE));
   if(currentPage>totalPages) currentPage = totalPages;
   const startIdx = (currentPage-1)*ROWS_PER_PAGE;
@@ -884,16 +913,18 @@ function renderTable(filtered){
         const arrow = cls==='up' ? '\u2191' : cls==='down' ? '\u2193' : '\u2248';
         swcHtml = `<span class="tag-swc ${cls}">${arrow} ${(r.DeltaIndice>=0?'+':'')}${fmt1(r.DeltaIndice)} (SWC ${fmt1(r.SWC)})</span>`;
       }
+      const m = medals[r.__id] || {};
       return `<tr>
         <td>${r.Jugador}</td>
         <td>${r.Actividad}</td>
         <td>${fmtDate(r.Fecha)}</td>
-        <td class="num">${fmt0(r.Distancia)}</td>
-        <td class="num">${fmt0(r.HSR)}</td>
-        <td class="num">${fmt0(r.EsfExpl)}</td>
-        <td class="num">${fmt1(r.BiG)}</td>
-        <td class="num">${fmt0(r.Contactos)}</td>
-        <td class="num">${fmt1(r.Indice)}</td>
+        <td class="num">${fmt0(r.Distancia)}${medalSpan(m.Distancia)}</td>
+        <td class="num">${fmt0(r.HSR)}${medalSpan(m.HSR)}</td>
+        <td class="num">${fmt0(r.EsfExpl)}${medalSpan(m.EsfExpl)}</td>
+        <td class="num">${fmt1(r.BiG)}${medalSpan(m.BiG)}</td>
+        <td class="num">${fmt0(r.Contactos)}${medalSpan(m.Contactos)}</td>
+        <td class="num">${fmt1(r.MaxVel)}${medalSpan(m.MaxVel)}</td>
+        <td class="num">${fmt1(r.Indice)}${medalSpan(m.Indice)}</td>
         <td>${swcHtml}</td>
       </tr>`;
     }).join('');
@@ -1171,6 +1202,7 @@ function renderTop4(f){
 /* ============ PRINT: FULL TABLE (all filtered rows, no pagination) ============ */
 function renderPrintTable(filtered){
   const sorted = filtered.slice().sort((a,b)=> new Date(b.Fecha)-new Date(a.Fecha));
+  const medals = computeMedals(filtered);
   const holder = document.getElementById('print-full-table');
   if(sorted.length===0){ holder.innerHTML = ''; return; }
   const rowsHtml = sorted.map(r=>{
@@ -1180,11 +1212,13 @@ function renderPrintTable(filtered){
       const cls = r.DeltaIndice >= r.SWC ? 'Sube' : r.DeltaIndice <= -r.SWC ? 'Baja' : 'Estable';
       swcTxt = `${cls} (${(r.DeltaIndice>=0?'+':'')}${fmt1(r.DeltaIndice)}, SWC ${fmt1(r.SWC)})`;
     }
+    const m = medals[r.__id] || {};
     return `<tr>
       <td>${r.Jugador}</td><td>${r.Actividad}</td><td>${fmtDate(r.Fecha)}</td>
-      <td class="num">${fmt0(r.Distancia)}</td><td class="num">${fmt0(r.HSR)}</td>
-      <td class="num">${fmt0(r.EsfExpl)}</td><td class="num">${fmt1(r.BiG)}</td>
-      <td class="num">${fmt0(r.Contactos)}</td><td class="num">${fmt1(r.Indice)}</td><td>${swcTxt}</td>
+      <td class="num">${fmt0(r.Distancia)}${medalSpan(m.Distancia)}</td><td class="num">${fmt0(r.HSR)}${medalSpan(m.HSR)}</td>
+      <td class="num">${fmt0(r.EsfExpl)}${medalSpan(m.EsfExpl)}</td><td class="num">${fmt1(r.BiG)}${medalSpan(m.BiG)}</td>
+      <td class="num">${fmt0(r.Contactos)}${medalSpan(m.Contactos)}</td><td class="num">${fmt1(r.MaxVel)}${medalSpan(m.MaxVel)}</td>
+      <td class="num">${fmt1(r.Indice)}${medalSpan(m.Indice)}</td><td>${swcTxt}</td>
     </tr>`;
   }).join('');
   holder.innerHTML = `<table style="width:100%;border-collapse:collapse;">
@@ -1192,7 +1226,8 @@ function renderPrintTable(filtered){
       <th>Jugador</th><th>Actividad</th><th>Fecha</th>
       <th class="num">Distancia (m)</th><th class="num">HSR (m)</th>
       <th class="num">Esf. Expl.</th><th class="num">BiG</th>
-      <th class="num">Contactos</th><th class="num">Indice</th><th>SWC vs anterior</th>
+      <th class="num">Contactos</th><th class="num">Vel. Max (km/h)</th>
+      <th class="num">Indice</th><th>SWC vs anterior</th>
     </tr></thead>
     <tbody>${rowsHtml}</tbody>
   </table>`;
