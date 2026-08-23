@@ -1,0 +1,42 @@
+name: Actualizar reporte
+
+# Se dispara automaticamente cada vez que se sube una planilla nueva a data/SIC_Carga.xlsx,
+# y tambien se puede disparar a mano desde la pestana "Actions" de GitHub ("Run workflow").
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/SIC_Carga.xlsx"
+      - "template/**"
+      - "assets/**"
+      - "scripts/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r scripts/requirements.txt
+
+      - name: Generar index.html a partir de la planilla
+        run: python scripts/build.py
+
+      - name: Publicar index.html actualizado
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Actualizar reporte con datos nuevos"
+          file_pattern: index.html
+          commit_user_name: "sic-reporte-bot"
+          commit_user_email: "actions@github.com"
