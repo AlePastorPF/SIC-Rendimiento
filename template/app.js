@@ -1444,6 +1444,33 @@ async function initApp(){
   window.addEventListener('resize', ()=>{});
 }
 
-/* ============ ACCESO ============ */
-/* El acceso restringido por contrasena fue deshabilitado a pedido: la app inicia directamente. */
-initApp();
+/* ============ PASSWORD GATE (usuario + contrasena) ============ */
+function checkCredentials(){
+  const userVal = document.getElementById('user-input').value.trim();
+  const pwVal = document.getElementById('pw-input').value;
+  const err = document.getElementById('pw-err');
+  if(userVal === CORRECT_USERNAME && pwVal === CORRECT_PASSWORD){
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block';
+    if(!window.__APP_INIT__){ window.__APP_INIT__=true; initApp(); }
+    try{ sessionStorage.setItem('sic_auth','1'); }catch(e){}
+  } else {
+    err.textContent = 'Usuario o contrasena incorrectos. Intente nuevamente.';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+document.getElementById('pw-btn').addEventListener('click', checkCredentials);
+document.getElementById('pw-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') checkCredentials(); });
+document.getElementById('user-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('pw-input').focus(); });
+
+(function tryAutoAuth(){
+  try{
+    if(sessionStorage.getItem('sic_auth')==='1'){
+      document.getElementById('gate').style.display='none';
+      document.getElementById('app').style.display='block';
+      window.__APP_INIT__=true;
+      initApp();
+    }
+  }catch(e){}
+})();

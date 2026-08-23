@@ -37,7 +37,6 @@ body{
 
 /* ---------- PASSWORD GATE ---------- */
 #gate{
-  display:none !important;
   position:fixed;inset:0;z-index:999;
   background:
     radial-gradient(700px 420px at 20% 15%, rgba(47,168,222,.20), transparent 60%),
@@ -45,6 +44,7 @@ body{
     var(--negro);
   align-items:center;justify-content:center;
   flex-direction:column;
+  display:flex;
 }
 #gate::before{
   content:"";
@@ -84,7 +84,7 @@ body{
 .gate-err{color:var(--rojo);font-size:12.5px;margin-top:10px;min-height:16px;font-weight:600;}
 
 /* ---------- APP ---------- */
-#app{display:block;min-height:100vh;}
+#app{display:none;min-height:100vh;}
 .topbar{
   background:linear-gradient(120deg,#0F1114 0%, var(--negro) 45%, #1A1E22 100%);
   padding:0 28px;
@@ -397,6 +397,7 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
     <img src="__LOGO_SRC__" alt="S.I.C.">
     <h1>Reporte General</h1>
     <p>Sistema de carga &mdash; acceso restringido</p>
+    <input type="text" id="user-input" placeholder="Usuario" autocomplete="off">
     <input type="password" id="pw-input" placeholder="Contrasena" autocomplete="off">
     <button id="pw-btn">Ingresar</button>
     <div class="gate-err" id="pw-err"></div>
@@ -636,6 +637,7 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
 const RAW_DATA = __DATA_JSON__;
 const LOGOS_B64 = __LOGOS_JSON__;
 const LOGOS_SMALL_B64 = __LOGOS_SMALL_JSON__;
+const CORRECT_USERNAME = "SIC PS";
 const CORRECT_PASSWORD = "1935Zanja";
 __APP_JS__
 </script>
