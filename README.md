@@ -69,6 +69,32 @@ hace falta corregirlo a mano cada vez — pero si en algún momento arreglan el
 dato en el origen (Catapult/OpenField), pueden borrar esas líneas del
 script.
 
+## Publicar con acceso protegido de verdad (Cloudflare Pages, gratis)
+
+`index.html` tiene una puerta de acceso propia (usuario/contraseña), pero es
+del lado del cliente: quien mire el código fuente puede encontrarla. Para una
+protección real (a nivel de servidor, imposible de esquivar viendo el
+código), este repo incluye `functions/_middleware.js`, pensado para
+[Cloudflare Pages](https://pages.cloudflare.com) (plan gratuito).
+
+1. Creá una cuenta gratis en Cloudflare y andá a **Workers & Pages → Create → Pages → Connect to Git**.
+2. Elegí este repositorio (`SIC-Rendimiento`).
+3. En la configuración de build: **Build command** vacío (no hace falta build,
+   `index.html` ya viene generado), **Build output directory**: `/` (la raíz).
+4. Antes del primer deploy (o después, y volvés a desplegar), andá a
+   **Settings → Environment variables** del proyecto y agregá, como
+   **Secret** (encrypted):
+   - `BASIC_AUTH_USER` = el usuario que quieras
+   - `BASIC_AUTH_PASS` = la contraseña que quieras
+5. Desplegá. Cloudflare te da una URL del tipo
+   `https://sic-rendimiento.pages.dev` — al entrar, el navegador va a pedir
+   usuario y contraseña con el cartel nativo del sistema, **antes** de
+   entregar ningún archivo del sitio.
+
+Este mecanismo es independiente del gate que ya tiene `index.html`: podés
+mantener las dos cosas (defensa en profundidad) o dejar el gate del
+`index.html` solo como cosmético si confiás en la protección de Cloudflare.
+
 ## Notas técnicas
 
 - El reporte carga dos librerías externas desde una CDN (Chart.js y
