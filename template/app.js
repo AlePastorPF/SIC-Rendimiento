@@ -1169,14 +1169,52 @@ const TOP4_METRICS = [
 ];
 
 function populateTop4Selector(preserveSelection){
-  const sel = document.getElementById('top4-jugadores');
-  if(!sel) return;
-  const prevSelected = preserveSelection===false ? new Set() : new Set([...sel.selectedOptions].map(o=>o.value));
+  const list = document.getElementById('top4-checkbox-list');
+  if(!list) return;
+  const prevChecked = preserveSelection===false ? new Set() : getSelectedTop4Jugadores();
   const f = getFilterValues();
   const scope = DATASET.filter(r=> f.temporada==='__ALL__' || String(r.Temporada)===f.temporada);
   const jugadores = [...new Set(scope.map(r=>r.Jugador))].sort();
-  sel.innerHTML = jugadores.map(j=>`<option value="${j.replace(/"/g,'&quot;')}">${j}</option>`).join('');
-  [...sel.options].forEach(o=>{ if(prevSelected.has(o.value)) o.selected = true; });
+
+  if(jugadores.length===0){
+    list.innerHTML = '<div class="checkbox-empty">No hay jugadores para esta temporada.</div>';
+  } else {
+    list.innerHTML = jugadores.map(j=>{
+      const esc = j.replace(/"/g,'&quot;');
+      const checked = prevChecked.has(j) ? 'checked' : '';
+      return `<label class="checkbox-item"><input type="checkbox" value="${esc}" ${checked}> ${j}</label>`;
+    }).join('');
+  }
+  updateTop4DropdownLabel();
+}
+
+function getSelectedTop4Jugadores(){
+  const list = document.getElementById('top4-checkbox-list');
+  if(!list) return new Set();
+  return new Set([...list.querySelectorAll('input[type="checkbox"]:checked')].map(cb=>cb.value));
+}
+
+function updateTop4DropdownLabel(){
+  const label = document.getElementById('top4-dropdown-label');
+  if(!label) return;
+  const selected = [...getSelectedTop4Jugadores()];
+  if(selected.length===0){
+    label.textContent = 'Todos los jugadores (Top 4 general)';
+  } else if(selected.length<=2){
+    label.textContent = selected.join(', ');
+  } else {
+    label.textContent = `${selected.length} jugadores seleccionados`;
+  }
+}
+
+function filterTop4Checkboxes(query){
+  const list = document.getElementById('top4-checkbox-list');
+  if(!list) return;
+  const q = query.trim().toLowerCase();
+  list.querySelectorAll('.checkbox-item').forEach(item=>{
+    const name = item.textContent.trim().toLowerCase();
+    item.classList.toggle('no-match', q.length>0 && !name.includes(q));
+  });
 }
 
 function top4CardHtml(r, i){
@@ -1210,8 +1248,7 @@ function renderTop4(f){
   let basePartidos = DATASET.filter(r=>r.Tipo==='Partido');
   if(f.temporada!=='__ALL__') basePartidos = basePartidos.filter(r=>String(r.Temporada)===f.temporada);
 
-  const selEl = document.getElementById('top4-jugadores');
-  const selectedJugadores = selEl ? [...selEl.selectedOptions].map(o=>o.value) : [];
+  const selectedJugadores = [...getSelectedTop4Jugadores()];
 
   if(selectedJugadores.length===0){
     // Comportamiento original: un solo grupo, respetando el filtro principal de jugador si esta activo.
@@ -1437,14 +1474,39 @@ async function initApp(){
   ['f-tipo','f-actividad','f-jugador'].forEach(id=>{
     document.getElementById(id).addEventListener('change', renderAll);
   });
-  document.getElementById('top4-jugadores').addEventListener('change', ()=>{
-    try{ renderTop4(getFilterValues()); }catch(e){ console.error('top4 render error', e); }
+
+  // Dropdown de casilleros para el Top 4 por jugador
+  const top4Dropdown = document.getElementById('top4-dropdown');
+  const top4Toggle = document.getElementById('top4-dropdown-toggle');
+  const top4Panel = document.getElementById('top4-dropdown-panel');
+  const top4List = document.getElementById('top4-checkbox-list');
+  const top4Search = document.getElementById('top4-search');
+
+  top4Toggle.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const isOpen = top4Dropdown.classList.toggle('open');
+    top4Panel.hidden = !isOpen;
+    if(isOpen){ top4Search.value=''; filterTop4Checkboxes(''); top4Search.focus(); }
+  });
+  document.addEventListener('click', (e)=>{
+    if(top4Dropdown.classList.contains('open') && !top4Dropdown.contains(e.target)){
+      top4Dropdown.classList.remove('open');
+      top4Panel.hidden = true;
+    }
+  });
+  top4Search.addEventListener('input', ()=>{ filterTop4Checkboxes(top4Search.value); });
+  top4List.addEventListener('change', (e)=>{
+    if(e.target && e.target.type==='checkbox'){
+      updateTop4DropdownLabel();
+      try{ renderTop4(getFilterValues()); }catch(err){ console.error('top4 render error', err); }
+    }
   });
   document.getElementById('top4-clear').addEventListener('click', ()=>{
-    const sel = document.getElementById('top4-jugadores');
-    [...sel.options].forEach(o=>{ o.selected = false; });
+    top4List.querySelectorAll('input[type="checkbox"]:checked').forEach(cb=>{ cb.checked=false; });
+    updateTop4DropdownLabel();
     try{ renderTop4(getFilterValues()); }catch(e){ console.error('top4 render error', e); }
   });
+
   ['timeline-start','timeline-end'].forEach(id=>{
     document.getElementById(id).addEventListener('input', ()=>{
       updateTimelineFillAndLabel();
@@ -1453,8 +1515,8 @@ async function initApp(){
   });
   document.getElementById('f-reset').addEventListener('click', ()=>{
     populateFilters(); // internamente ya llama populateTop4Selector() preservando seleccion
-    const top4Sel = document.getElementById('top4-jugadores');
-    [...top4Sel.options].forEach(o=>{ o.selected = false; });
+    document.getElementById('top4-checkbox-list').querySelectorAll('input[type="checkbox"]:checked').forEach(cb=>{ cb.checked=false; });
+    updateTop4DropdownLabel();
     renderAll();
   });
 

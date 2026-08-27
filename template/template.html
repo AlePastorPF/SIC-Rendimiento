@@ -347,6 +347,37 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
   font-family:inherit;background:#fdfdfe;color:var(--negro);min-width:240px;flex:1;
 }
 .top4-selector select:focus{outline:none;border-color:var(--celeste);box-shadow:0 0 0 3px rgba(47,168,222,.12);}
+
+.checkbox-dropdown{position:relative;flex:1;min-width:260px;}
+.checkbox-dropdown-toggle{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 12px;border:1.5px solid var(--borde);border-radius:7px;background:#fdfdfe;
+  font-size:12.5px;font-family:inherit;color:var(--negro);cursor:pointer;text-align:left;
+}
+.checkbox-dropdown-toggle:hover{border-color:var(--celeste);}
+.checkbox-dropdown-toggle svg{flex-shrink:0;color:var(--gris-claro);transition:transform .15s;}
+.checkbox-dropdown.open .checkbox-dropdown-toggle svg{transform:rotate(180deg);}
+.checkbox-dropdown.open .checkbox-dropdown-toggle{border-color:var(--celeste);box-shadow:0 0 0 3px rgba(47,168,222,.12);}
+.checkbox-dropdown-panel{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;
+  background:#fff;border:1.5px solid var(--borde);border-radius:10px;
+  box-shadow:var(--shadow-lg);padding:10px;
+}
+.checkbox-dropdown-panel[hidden]{display:none;}
+.checkbox-dropdown-panel input[type="text"]{
+  width:100%;padding:8px 10px;border:1.5px solid var(--borde);border-radius:6px;
+  font-size:12.5px;font-family:inherit;margin-bottom:8px;
+}
+.checkbox-dropdown-panel input[type="text"]:focus{outline:none;border-color:var(--celeste);}
+.checkbox-list{max-height:220px;overflow-y:auto;}
+.checkbox-item{
+  display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:6px;cursor:pointer;
+  font-size:12.5px;color:var(--negro);
+}
+.checkbox-item:hover{background:var(--fondo);}
+.checkbox-item input[type="checkbox"]{width:15px;height:15px;accent-color:var(--celeste);cursor:pointer;flex-shrink:0;}
+.checkbox-item.no-match{display:none;}
+.checkbox-empty{padding:10px 6px;font-size:12px;color:var(--gris-claro);text-align:center;}
 .top4-player-group{margin-bottom:26px;}
 .top4-player-header{
   display:flex;align-items:center;gap:10px;margin-bottom:12px;
@@ -648,8 +679,17 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
 
     <div class="section-label"><div class="bar"></div><h2>Partidos mas exigentes</h2><div class="desc">Top 4 segun el indice de exigencia</div></div>
     <div class="top4-selector">
-      <label for="top4-jugadores">Elegi uno o mas jugadores para ver el Top 4 de cada uno (dejalo vacio para ver el Top 4 general)</label>
-      <select id="top4-jugadores" multiple size="4"></select>
+      <label>Elegi uno o mas jugadores para ver el Top 4 de cada uno (dejalo vacio para ver el Top 4 general)</label>
+      <div class="checkbox-dropdown" id="top4-dropdown">
+        <button type="button" class="checkbox-dropdown-toggle" id="top4-dropdown-toggle">
+          <span id="top4-dropdown-label">Todos los jugadores (Top 4 general)</span>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="checkbox-dropdown-panel" id="top4-dropdown-panel" hidden>
+          <input type="text" id="top4-search" placeholder="Buscar jugador...">
+          <div class="checkbox-list" id="top4-checkbox-list"></div>
+        </div>
+      </div>
       <button class="filter-reset" id="top4-clear" type="button">Limpiar seleccion</button>
     </div>
     <div id="top4-container"></div>
