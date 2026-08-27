@@ -283,8 +283,8 @@ function getFilterValues(){
   return {
     temporada: document.getElementById('f-temporada').value,
     tipo: document.getElementById('f-tipo').value,
-    actividad: document.getElementById('f-actividad').value,
-    jugador: document.getElementById('f-jugador').value,
+    actividad: getCheckedValues(document.getElementById('f-actividad-list')),
+    jugador: getCheckedValues(document.getElementById('f-jugador-list')),
     timelineStart: tStart,
     timelineEnd: tEnd
   };
@@ -294,8 +294,8 @@ function applyFilters(data, f){
   return data.filter(r=>{
     if(f.temporada!=='__ALL__' && String(r.Temporada)!==f.temporada) return false;
     if(f.tipo!=='__ALL__' && r.Tipo!==f.tipo) return false;
-    if(f.actividad!=='__ALL__' && r.Actividad!==f.actividad) return false;
-    if(f.jugador!=='__ALL__' && r.Jugador!==f.jugador) return false;
+    if(f.actividad.length>0 && !f.actividad.includes(r.Actividad)) return false;
+    if(f.jugador.length>0 && !f.jugador.includes(r.Jugador)) return false;
     if(f.timelineStart!==null && f.timelineEnd!==null){
       const di = dayIndex(r.Fecha);
       if(di<f.timelineStart || di>f.timelineEnd) return false;
@@ -303,6 +303,94 @@ function applyFilters(data, f){
     return true;
   });
 }
+
+/* ============ GENERIC CHECKBOX-DROPDOWN HELPERS ============ */
+let ALL_CHECKBOX_DROPDOWNS = [];
+
+function getCheckedValues(list){
+  if(!list) return [];
+  return [...list.querySelectorAll('input[type="checkbox"]:checked')].map(cb=>cb.value);
+}
+
+function filterCheckboxItems(list, query){
+  const q = query.trim().toLowerCase();
+  list.querySelectorAll('.checkbox-item').forEach(item=>{
+    const name = item.textContent.trim().toLowerCase();
+    item.classList.toggle('no-match', q.length>0 && !name.includes(q));
+  });
+}
+
+function updateDropdownLabel(listId, labelId, allLabel){
+  const list = document.getElementById(listId);
+  const label = document.getElementById(labelId);
+  if(!list || !label) return;
+  const selected = getCheckedValues(list);
+  if(selected.length===0) label.textContent = allLabel;
+  else if(selected.length<=2) label.textContent = selected.join(', ');
+  else label.textContent = `${selected.length} seleccionados`;
+}
+
+function populateCheckboxList(listId, values, preserveSelection){
+  const list = document.getElementById(listId);
+  if(!list) return;
+  const prevChecked = preserveSelection===false ? new Set() : new Set(getCheckedValues(list));
+  if(values.length===0){
+    list.innerHTML = '<div class="checkbox-empty">Sin opciones disponibles.</div>';
+    return;
+  }
+  list.innerHTML = values.map(v=>{
+    const esc = v.replace(/"/g,'&quot;');
+    const checked = prevChecked.has(v) ? 'checked' : '';
+    return `<label class="checkbox-item"><input type="checkbox" value="${esc}" ${checked}> ${v}</label>`;
+  }).join('');
+}
+
+function closeAllDropdowns(except){
+  ALL_CHECKBOX_DROPDOWNS.forEach(d=>{
+    if(d.dropdown===except) return;
+    d.dropdown.classList.remove('open');
+    d.panel.hidden = true;
+  });
+}
+
+function wireCheckboxDropdown(cfg){
+  const dropdown = document.getElementById(cfg.dropdownId);
+  const toggle = document.getElementById(cfg.toggleId);
+  const panel = document.getElementById(cfg.panelId);
+  const list = document.getElementById(cfg.listId);
+  const search = document.getElementById(cfg.searchId);
+  if(!dropdown || !toggle || !panel || !list) return;
+
+  toggle.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    closeAllDropdowns(dropdown);
+    const isOpen = dropdown.classList.toggle('open');
+    panel.hidden = !isOpen;
+    if(isOpen && search){ search.value=''; filterCheckboxItems(list,''); search.focus(); }
+  });
+  if(search){
+    search.addEventListener('click', (e)=>e.stopPropagation());
+    search.addEventListener('input', ()=>{ filterCheckboxItems(list, search.value); });
+  }
+  list.addEventListener('change', (e)=>{
+    if(e.target && e.target.type==='checkbox'){
+      updateDropdownLabel(cfg.listId, cfg.labelId, cfg.allLabel);
+      if(cfg.onChange) cfg.onChange();
+    }
+  });
+
+  ALL_CHECKBOX_DROPDOWNS.push({dropdown, panel});
+}
+
+document.addEventListener('click', (e)=>{
+  ALL_CHECKBOX_DROPDOWNS.forEach(d=>{
+    if(d.dropdown.classList.contains('open') && !d.dropdown.contains(e.target)){
+      d.dropdown.classList.remove('open');
+      d.panel.hidden = true;
+    }
+  });
+});
+
 
 /* ============ TIMELINE ============ */
 function dayIndex(dateStr){
@@ -361,14 +449,14 @@ function renderTimelineMarkers(scope){
     seen.add(r.Actividad);
     uniqueActs.push(r);
   });
-  const currentActividad = document.getElementById('f-actividad').value;
+  const currentActividades = new Set(getCheckedValues(document.getElementById('f-actividad-list')));
   const holder = document.getElementById('timeline-markers');
   holder.innerHTML = uniqueActs.map(r=>{
     const di = dayIndex(r.Fecha);
     const pct = ((di-min)/range)*100;
     const cls = ['timeline-marker'];
     if(r.Tipo==='Entrenamiento') cls.push('entren');
-    if(r.Actividad===currentActividad) cls.push('selected');
+    if(currentActividades.has(r.Actividad)) cls.push('selected');
     const title = `${r.Actividad} - ${fmtDate(r.Fecha)}`.replace(/"/g,'&quot;');
     return `<div class="${cls.join(' ')}" style="left:${pct}%;" data-actividad="${r.Actividad.replace(/"/g,'&quot;')}" title="${title}"></div>`;
   }).join('');
@@ -376,15 +464,17 @@ function renderTimelineMarkers(scope){
   holder.querySelectorAll('.timeline-marker').forEach(el=>{
     el.addEventListener('click', ()=>{
       const act = el.getAttribute('data-actividad');
-      const selAct = document.getElementById('f-actividad');
-      selAct.value = act;
-      selAct.dispatchEvent(new Event('change'));
+      const list = document.getElementById('f-actividad-list');
+      list.querySelectorAll('input[type="checkbox"]').forEach(cb=>{ cb.checked = (cb.value===act); });
+      updateDropdownLabel('f-actividad-list','f-actividad-label','Todas');
+      renderAll();
     });
   });
 }
 
 /* ============ POPULATE FILTER OPTIONS ============ */
-function populateFilters(){
+function populateFilters(keepSelection){
+  const preserve = keepSelection===false ? false : true;
   const temporadas = [...new Set(DATASET.map(r=>r.Temporada))].sort((a,b)=>b-a);
   const selTemp = document.getElementById('f-temporada');
   const prevTemp = selTemp.value;
@@ -394,7 +484,7 @@ function populateFilters(){
   else if(temporadas.map(String).includes('2026')) selTemp.value = '2026';
   else if(temporadas.length) selTemp.value = String(temporadas[0]);
 
-  refreshActividadYJugadorOptions(true);
+  refreshActividadYJugadorOptions(preserve);
   initTimelineDomain();
   try{ populateTop4Selector(); }catch(e){ console.error('top4 selector populate error', e); }
 }
@@ -413,17 +503,13 @@ function refreshActividadYJugadorOptions(keepSelection){
   if(prevTipo && [...selTipo.options].some(o=>o.value===prevTipo)) selTipo.value = prevTipo;
   else if(tipos.includes('Partido')) selTipo.value = 'Partido';
 
-  const selAct = document.getElementById('f-actividad');
-  const prevAct = keepSelection ? selAct.value : '__ALL__';
   const actividades = [...new Set(scoped.map(r=>r.Actividad))].sort();
-  selAct.innerHTML = '<option value="__ALL__">Todas</option>' + actividades.map(a=>`<option value="${a.replace(/"/g,'&quot;')}">${a}</option>`).join('');
-  if(prevAct && [...selAct.options].some(o=>o.value===prevAct)) selAct.value = prevAct;
+  populateCheckboxList('f-actividad-list', actividades, keepSelection);
+  updateDropdownLabel('f-actividad-list','f-actividad-label','Todas');
 
-  const selJug = document.getElementById('f-jugador');
-  const prevJug = keepSelection ? selJug.value : '__ALL__';
   const jugadores = [...new Set(scoped.map(r=>r.Jugador))].sort();
-  selJug.innerHTML = '<option value="__ALL__">Todos los jugadores</option>' + jugadores.map(j=>`<option value="${j.replace(/"/g,'&quot;')}">${j}</option>`).join('');
-  if(prevJug && [...selJug.options].some(o=>o.value===prevJug)) selJug.value = prevJug;
+  populateCheckboxList('f-jugador-list', jugadores, keepSelection);
+  updateDropdownLabel('f-jugador-list','f-jugador-label','Todos los jugadores');
 }
 
 /* ============ GAUGE (SVG speedometer) ============ */
@@ -830,12 +916,12 @@ function renderKpiCards(filtered, f, fullDataInSeason){
   const kpi3val = document.getElementById('kpi3-value');
   const kpi3tag = document.getElementById('kpi3-tag');
   const kpi3foot = document.getElementById('kpi3-foot');
-  if(f.jugador==='__ALL__'){
+  if(f.jugador.length!==1){
     const withPrev = filtered.filter(r=>r.DeltaIndice!==null && r.DeltaIndice!==undefined);
     if(withPrev.length===0){
       kpi3val.textContent='\u2014'; kpi3val.className='delta-value flat';
       kpi3tag.textContent='Seleccione un jugador'; kpi3tag.className='delta-tag flat';
-      kpi3foot.textContent='Elegi un jugador en los filtros para ver el detalle actividad a actividad.';
+      kpi3foot.textContent='Elegi un unico jugador en los filtros para ver el detalle actividad a actividad.';
     } else {
       const meaningful = withPrev.filter(r=> Math.abs(r.DeltaIndice) >= r.SWC ).length;
       kpi3val.textContent = meaningful+' / '+withPrev.length;
@@ -1253,7 +1339,7 @@ function renderTop4(f){
   if(selectedJugadores.length===0){
     // Comportamiento original: un solo grupo, respetando el filtro principal de jugador si esta activo.
     let base = basePartidos;
-    if(f.jugador!=='__ALL__') base = base.filter(r=>r.Jugador===f.jugador);
+    if(f.jugador.length>0) base = base.filter(r=>f.jugador.includes(r.Jugador));
     const top = top4For(base, 4);
     if(top.length===0){
       container.innerHTML = '<div class="empty-state">No hay partidos para los filtros seleccionados.</div>';
@@ -1525,8 +1611,19 @@ async function initApp(){
       renderAll();
     });
   });
-  ['f-tipo','f-actividad','f-jugador'].forEach(id=>{
-    document.getElementById(id).addEventListener('change', renderAll);
+  document.getElementById('f-tipo').addEventListener('change', renderAll);
+
+  wireCheckboxDropdown({
+    dropdownId:'f-actividad-dropdown', toggleId:'f-actividad-toggle', panelId:'f-actividad-panel',
+    listId:'f-actividad-list', searchId:'f-actividad-search', labelId:'f-actividad-label',
+    allLabel:'Todas',
+    onChange: ()=>{ try{ renderAll(); }catch(e){ console.error('renderAll error', e); } }
+  });
+  wireCheckboxDropdown({
+    dropdownId:'f-jugador-dropdown', toggleId:'f-jugador-toggle', panelId:'f-jugador-panel',
+    listId:'f-jugador-list', searchId:'f-jugador-search', labelId:'f-jugador-label',
+    allLabel:'Todos los jugadores',
+    onChange: ()=>{ try{ renderAll(); }catch(e){ console.error('renderAll error', e); } }
   });
 
   // Dropdown de casilleros para el Top 4 por jugador
@@ -1568,7 +1665,7 @@ async function initApp(){
     });
   });
   document.getElementById('f-reset').addEventListener('click', ()=>{
-    populateFilters(); // internamente ya llama populateTop4Selector() preservando seleccion
+    populateFilters(false); // false = no preservar seleccion (limpia actividad/jugador tambien)
     document.getElementById('top4-checkbox-list').querySelectorAll('input[type="checkbox"]:checked').forEach(cb=>{ cb.checked=false; });
     updateTop4DropdownLabel();
     renderAll();
