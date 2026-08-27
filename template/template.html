@@ -378,6 +378,27 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
 .checkbox-item input[type="checkbox"]{width:15px;height:15px;accent-color:var(--celeste);cursor:pointer;flex-shrink:0;}
 .checkbox-item.no-match{display:none;}
 .checkbox-empty{padding:10px 6px;font-size:12px;color:var(--gris-claro);text-align:center;}
+
+/* ---------- PODIO POR PUESTO ---------- */
+.puesto-podio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:920px){.puesto-podio-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.puesto-podio-grid{grid-template-columns:1fr;}}
+.puesto-podio-card{
+  background:var(--blanco);border:1px solid var(--borde);border-radius:12px;
+  padding:16px 18px;box-shadow:var(--shadow-sm);
+}
+.puesto-podio-title{
+  font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--negro);
+  margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--fondo);
+}
+.podio-item{display:flex;align-items:center;gap:10px;padding:7px 0;}
+.podio-item + .podio-item{border-top:1px dashed var(--borde);}
+.podio-medal{font-size:19px;flex-shrink:0;width:24px;text-align:center;}
+.podio-info{flex:1;min-width:0;}
+.podio-jugador{font-size:12.5px;font-weight:700;color:var(--negro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.podio-actividad{font-size:10.5px;color:var(--gris-claro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.podio-indice{font-size:14.5px;font-weight:700;color:var(--celeste-dark);flex-shrink:0;}
+.podio-rank-1 .podio-indice{color:var(--negro);}
 .top4-player-group{margin-bottom:26px;}
 .top4-player-header{
   display:flex;align-items:center;gap:10px;margin-bottom:12px;
@@ -693,6 +714,10 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
       <button class="filter-reset" id="top4-clear" type="button">Limpiar seleccion</button>
     </div>
     <div id="top4-container"></div>
+
+    <div class="section-label"><div class="bar"></div><h2>Podio por puesto</h2><div class="desc">Top 3 de cada puesto segun el indice de exigencia, dentro de la seleccion actual</div></div>
+    <div class="chart-note screen-only-note" style="margin-bottom:14px;">Se calcula sobre los partidos incluidos en los filtros de arriba (temporada, actividad, jugador, linea de tiempo). Si un jugador aparece en mas de un partido dentro de la seleccion, se toma su mejor indice.</div>
+    <div id="puesto-podio-container" class="puesto-podio-grid"></div>
 
   </div>
 

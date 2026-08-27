@@ -1282,6 +1282,59 @@ function renderTop4(f){
   container.innerHTML = groupsHtml;
 }
 
+/* ============ PODIO POR PUESTO ============ */
+const POSITION_ORDER = ['Pilar','Hooker','Segunda Linea','Tercera Linea','Medio Scrum','Apertura','Centro','Wing','Fullback','Utilidad'];
+const PODIO_MEDALS = ['\ud83e\udd47','\ud83e\udd48','\ud83e\udd49'];
+
+function renderPuestoPodio(filtered){
+  const container = document.getElementById('puesto-podio-container');
+  if(!container) return;
+
+  const base = filtered.filter(r=> r.Tipo==='Partido' && r.Puesto && r.Puesto.trim()!=='');
+  if(base.length===0){
+    container.innerHTML = '<div class="empty-state">No hay partidos para los filtros seleccionados.</div>';
+    return;
+  }
+
+  // Si un jugador aparece en mas de un partido dentro de la seleccion, nos quedamos con su mejor indice.
+  const bestByPlayerPuesto = {};
+  base.forEach(r=>{
+    const key = r.Puesto+'|'+r.Jugador;
+    if(!bestByPlayerPuesto[key] || r.Indice>bestByPlayerPuesto[key].Indice){
+      bestByPlayerPuesto[key] = r;
+    }
+  });
+  const rows = Object.values(bestByPlayerPuesto);
+
+  const byPuesto = {};
+  rows.forEach(r=>{
+    if(!byPuesto[r.Puesto]) byPuesto[r.Puesto] = [];
+    byPuesto[r.Puesto].push(r);
+  });
+
+  const presentPositions = Object.keys(byPuesto);
+  const orderedPositions = POSITION_ORDER.filter(p=>presentPositions.includes(p))
+    .concat(presentPositions.filter(p=>!POSITION_ORDER.includes(p)).sort());
+
+  container.innerHTML = orderedPositions.map(puesto=>{
+    const top3 = byPuesto[puesto].slice().sort((a,b)=>b.Indice-a.Indice).slice(0,3);
+    const itemsHtml = top3.map((r,i)=>`
+      <div class="podio-item podio-rank-${i+1}">
+        <div class="podio-medal">${PODIO_MEDALS[i]}</div>
+        <div class="podio-info">
+          <div class="podio-jugador">${r.Jugador}</div>
+          <div class="podio-actividad">${r.Actividad} &middot; ${fmtDate(r.Fecha)}</div>
+        </div>
+        <div class="podio-indice">${fmt1(r.Indice)}</div>
+      </div>
+    `).join('');
+    return `<div class="puesto-podio-card">
+      <div class="puesto-podio-title">${puesto}</div>
+      ${itemsHtml}
+    </div>`;
+  }).join('');
+}
+
 /* ============ PRINT: FULL TABLE (all filtered rows, no pagination) ============ */
 function renderPrintTable(filtered){
   const sorted = filtered.slice().sort((a,b)=> new Date(b.Fecha)-new Date(a.Fecha));
@@ -1349,6 +1402,7 @@ function renderAll(){
   try{ renderWeeklyChart(filtered); }catch(e){ console.error('weekly chart render error', e); }
   try{ renderScatter(filtered); }catch(e){ console.error('scatter render error', e); }
   try{ renderTop4(f); }catch(e){ console.error('top4 render error', e); }
+  try{ renderPuestoPodio(filtered); }catch(e){ console.error('puesto podio render error', e); }
   currentPage = 1;
   try{ renderTable(filtered); }catch(e){ console.error('table render error', e); }
   lastFilteredForPrint = filtered;
