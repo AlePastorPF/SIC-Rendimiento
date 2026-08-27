@@ -396,6 +396,7 @@ function populateFilters(){
 
   refreshActividadYJugadorOptions(true);
   initTimelineDomain();
+  try{ populateTop4Selector(); }catch(e){ console.error('top4 selector populate error', e); }
 }
 
 function refreshActividadYJugadorOptions(keepSelection){
@@ -1167,23 +1168,23 @@ const TOP4_METRICS = [
   {key:'Contactos', label:'Contactos', fmt:fmt0, unit:''}
 ];
 
-function renderTop4(f){
-  let base = DATASET.filter(r=>r.Tipo==='Partido');
-  if(f.temporada!=='__ALL__') base = base.filter(r=>String(r.Temporada)===f.temporada);
-  if(f.jugador!=='__ALL__') base = base.filter(r=>r.Jugador===f.jugador);
-  const top = base.slice().sort((a,b)=>b.Indice-a.Indice).slice(0,4);
+function populateTop4Selector(preserveSelection){
+  const sel = document.getElementById('top4-jugadores');
+  if(!sel) return;
+  const prevSelected = preserveSelection===false ? new Set() : new Set([...sel.selectedOptions].map(o=>o.value));
+  const f = getFilterValues();
+  const scope = DATASET.filter(r=> f.temporada==='__ALL__' || String(r.Temporada)===f.temporada);
+  const jugadores = [...new Set(scope.map(r=>r.Jugador))].sort();
+  sel.innerHTML = jugadores.map(j=>`<option value="${j.replace(/"/g,'&quot;')}">${j}</option>`).join('');
+  [...sel.options].forEach(o=>{ if(prevSelected.has(o.value)) o.selected = true; });
+}
 
-  const grid = document.getElementById('top4-grid');
-  if(top.length===0){
-    grid.innerHTML = '<div class="empty-state">No hay partidos para los filtros seleccionados.</div>';
-    return;
-  }
-  grid.innerHTML = top.map((r,i)=>{
-    const key = opponentLogoKey(r.Actividad);
-    const logoSrc = LOGOS_B64[key] ? ('data:image/png;base64,'+LOGOS_B64[key]) : ('data:image/png;base64,'+LOGOS_B64['SIC']);
-    const rival = r.Actividad.replace(/^SIC\s*vs\s*/i,'').replace(/^@?\s*SIC.*/i, 'SIC (local)');
-    const metricsHtml = TOP4_METRICS.map(m=>`<div>${m.label}<br><span>${m.fmt(r[m.key])}${m.unit}</span></div>`).join('');
-    return `<div class="top4-card">
+function top4CardHtml(r, i){
+  const key = opponentLogoKey(r.Actividad);
+  const logoSrc = LOGOS_B64[key] ? ('data:image/png;base64,'+LOGOS_B64[key]) : ('data:image/png;base64,'+LOGOS_B64['SIC']);
+  const rival = r.Actividad.replace(/^SIC\s*vs\s*/i,'').replace(/^@?\s*SIC.*/i, 'SIC (local)');
+  const metricsHtml = TOP4_METRICS.map(m=>`<div>${m.label}<br><span>${m.fmt(r[m.key])}${m.unit}</span></div>`).join('');
+  return `<div class="top4-card">
       <div class="top4-rank"><span class="rank-num">${i+1}</span>Mas exigente</div>
       <div class="top4-logo-row">
         <img src="${logoSrc}" alt="">
@@ -1196,7 +1197,52 @@ function renderTop4(f){
       <div class="top4-index-pct">${r.PlayerSeasonMaxIndice ? fmt1(r.Indice/r.PlayerSeasonMaxIndice*100)+'% del maximo de temporada de '+r.Jugador.split(' ')[0] : ''}</div>
       <div class="top4-metrics">${metricsHtml}</div>
     </div>`;
+}
+
+function top4For(base, n){
+  return base.slice().sort((a,b)=>b.Indice-a.Indice).slice(0, n||4);
+}
+
+function renderTop4(f){
+  const container = document.getElementById('top4-container');
+  if(!container) return;
+
+  let basePartidos = DATASET.filter(r=>r.Tipo==='Partido');
+  if(f.temporada!=='__ALL__') basePartidos = basePartidos.filter(r=>String(r.Temporada)===f.temporada);
+
+  const selEl = document.getElementById('top4-jugadores');
+  const selectedJugadores = selEl ? [...selEl.selectedOptions].map(o=>o.value) : [];
+
+  if(selectedJugadores.length===0){
+    // Comportamiento original: un solo grupo, respetando el filtro principal de jugador si esta activo.
+    let base = basePartidos;
+    if(f.jugador!=='__ALL__') base = base.filter(r=>r.Jugador===f.jugador);
+    const top = top4For(base, 4);
+    if(top.length===0){
+      container.innerHTML = '<div class="empty-state">No hay partidos para los filtros seleccionados.</div>';
+      return;
+    }
+    container.innerHTML = `<div class="top4-grid">${top.map((r,i)=>top4CardHtml(r,i)).join('')}</div>`;
+    return;
+  }
+
+  // Un grupo por cada jugador seleccionado.
+  const groupsHtml = selectedJugadores.map(jugador=>{
+    const base = basePartidos.filter(r=>r.Jugador===jugador);
+    const top = top4For(base, 4);
+    const bodyHtml = top.length===0
+      ? '<div class="empty-state">Este jugador no tiene partidos en la seleccion actual.</div>'
+      : `<div class="top4-grid">${top.map((r,i)=>top4CardHtml(r,i)).join('')}</div>`;
+    return `<div class="top4-player-group">
+      <div class="top4-player-header">
+        <h3>${jugador}</h3>
+        <span class="count-pill">${top.length} partido${top.length===1?'':'s'}</span>
+      </div>
+      ${bodyHtml}
+    </div>`;
   }).join('');
+
+  container.innerHTML = groupsHtml;
 }
 
 /* ============ PRINT: FULL TABLE (all filtered rows, no pagination) ============ */
@@ -1384,11 +1430,20 @@ async function initApp(){
     document.getElementById(id).addEventListener('change', ()=>{
       refreshActividadYJugadorOptions(false);
       initTimelineDomain();
+      try{ populateTop4Selector(); }catch(e){ console.error('top4 selector populate error', e); }
       renderAll();
     });
   });
   ['f-tipo','f-actividad','f-jugador'].forEach(id=>{
     document.getElementById(id).addEventListener('change', renderAll);
+  });
+  document.getElementById('top4-jugadores').addEventListener('change', ()=>{
+    try{ renderTop4(getFilterValues()); }catch(e){ console.error('top4 render error', e); }
+  });
+  document.getElementById('top4-clear').addEventListener('click', ()=>{
+    const sel = document.getElementById('top4-jugadores');
+    [...sel.options].forEach(o=>{ o.selected = false; });
+    try{ renderTop4(getFilterValues()); }catch(e){ console.error('top4 render error', e); }
   });
   ['timeline-start','timeline-end'].forEach(id=>{
     document.getElementById(id).addEventListener('input', ()=>{
@@ -1397,7 +1452,9 @@ async function initApp(){
     });
   });
   document.getElementById('f-reset').addEventListener('click', ()=>{
-    populateFilters();
+    populateFilters(); // internamente ya llama populateTop4Selector() preservando seleccion
+    const top4Sel = document.getElementById('top4-jugadores');
+    [...top4Sel.options].forEach(o=>{ o.selected = false; });
     renderAll();
   });
 

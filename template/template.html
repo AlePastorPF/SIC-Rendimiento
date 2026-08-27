@@ -333,6 +333,31 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
 .top4-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
 @media(max-width:920px){.top4-grid{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:560px){.top4-grid{grid-template-columns:1fr;}}
+.top4-selector{
+  background:var(--blanco);border:1px solid var(--borde);border-radius:12px;
+  padding:16px 20px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;
+  margin-bottom:18px;box-shadow:var(--shadow-sm);
+}
+.top4-selector label{
+  font-size:11px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;
+  flex-basis:100%;margin-bottom:6px;
+}
+.top4-selector select{
+  padding:8px 10px;border:1.5px solid var(--borde);border-radius:7px;font-size:12.5px;
+  font-family:inherit;background:#fdfdfe;color:var(--negro);min-width:240px;flex:1;
+}
+.top4-selector select:focus{outline:none;border-color:var(--celeste);box-shadow:0 0 0 3px rgba(47,168,222,.12);}
+.top4-player-group{margin-bottom:26px;}
+.top4-player-header{
+  display:flex;align-items:center;gap:10px;margin-bottom:12px;
+}
+.top4-player-header h3{
+  font-size:13.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--negro);
+}
+.top4-player-header .count-pill{
+  font-size:10.5px;font-weight:700;color:var(--celeste-dark);background:var(--celeste-soft);
+  padding:3px 10px;border-radius:12px;
+}
 .top4-card{
   background:linear-gradient(155deg,#1A1E22 0%, var(--negro) 55%, #0D0F11 100%);
   border-radius:12px;padding:18px 18px 16px;color:#fff;position:relative;overflow:hidden;
@@ -622,7 +647,12 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
     </div>
 
     <div class="section-label"><div class="bar"></div><h2>Partidos mas exigentes</h2><div class="desc">Top 4 segun el indice de exigencia</div></div>
-    <div class="top4-grid" id="top4-grid"></div>
+    <div class="top4-selector">
+      <label for="top4-jugadores">Elegi uno o mas jugadores para ver el Top 4 de cada uno (dejalo vacio para ver el Top 4 general)</label>
+      <select id="top4-jugadores" multiple size="4"></select>
+      <button class="filter-reset" id="top4-clear" type="button">Limpiar seleccion</button>
+    </div>
+    <div id="top4-container"></div>
 
   </div>
 
