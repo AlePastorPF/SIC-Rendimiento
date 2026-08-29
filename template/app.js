@@ -491,6 +491,33 @@ function populateFilters(keepSelection){
   try{ populateTop4Selector(); }catch(e){ console.error('top4 selector populate error', e); }
 }
 
+/* ============ Vinculacion bidireccional Jugador <-> Puesto ============ */
+function refreshJugadorOptionsFromPuesto(){
+  const f = getFilterValues();
+  const scope = DATASET.filter(r=>{
+    if(f.temporada!=='__ALL__' && String(r.Temporada)!==f.temporada) return false;
+    if(f.puesto.length>0 && !f.puesto.includes(r.Puesto)) return false;
+    return true;
+  });
+  const jugadores = [...new Set(scope.map(r=>r.Jugador))].sort();
+  populateCheckboxList('f-jugador-list', jugadores, true);
+  updateDropdownLabel('f-jugador-list','f-jugador-label','Todos los jugadores');
+}
+
+function refreshPuestoOptionsFromJugador(){
+  const f = getFilterValues();
+  const scope = DATASET.filter(r=>{
+    if(f.temporada!=='__ALL__' && String(r.Temporada)!==f.temporada) return false;
+    if(f.jugador.length>0 && !f.jugador.includes(r.Jugador)) return false;
+    return true;
+  });
+  const puestosPresentes = [...new Set(scope.map(r=>r.Puesto).filter(p=>p && p.trim()!==''))];
+  const puestos = POSITION_ORDER.filter(p=>puestosPresentes.includes(p))
+    .concat(puestosPresentes.filter(p=>!POSITION_ORDER.includes(p)).sort());
+  populateCheckboxList('f-puesto-list', puestos, true);
+  updateDropdownLabel('f-puesto-list','f-puesto-label','Todos los puestos');
+}
+
 function refreshActividadYJugadorOptions(keepSelection){
   const f = getFilterValues();
   const scoped = DATASET.filter(r=>{
@@ -1631,13 +1658,19 @@ async function initApp(){
     dropdownId:'f-jugador-dropdown', toggleId:'f-jugador-toggle', panelId:'f-jugador-panel',
     listId:'f-jugador-list', searchId:'f-jugador-search', labelId:'f-jugador-label',
     allLabel:'Todos los jugadores',
-    onChange: ()=>{ try{ renderAll(); }catch(e){ console.error('renderAll error', e); } }
+    onChange: ()=>{
+      try{ refreshPuestoOptionsFromJugador(); }catch(e){ console.error('refresh puesto error', e); }
+      try{ renderAll(); }catch(e){ console.error('renderAll error', e); }
+    }
   });
   wireCheckboxDropdown({
     dropdownId:'f-puesto-dropdown', toggleId:'f-puesto-toggle', panelId:'f-puesto-panel',
     listId:'f-puesto-list', searchId:null, labelId:'f-puesto-label',
     allLabel:'Todos los puestos',
-    onChange: ()=>{ try{ renderAll(); }catch(e){ console.error('renderAll error', e); } }
+    onChange: ()=>{
+      try{ refreshJugadorOptionsFromPuesto(); }catch(e){ console.error('refresh jugador error', e); }
+      try{ renderAll(); }catch(e){ console.error('renderAll error', e); }
+    }
   });
 
   // Dropdown de casilleros para el Top 4 por jugador
