@@ -972,7 +972,7 @@ function attachSWC(data){
     byPlayer[r.Jugador].push(r);
   });
   Object.keys(byPlayer).forEach(p=>{
-    const arr = byPlayer[p].sort((a,b)=> new Date(a.Fecha) - new Date(b.Fecha));
+    const arr = byPlayer[p].sort((a,b)=> parseLocalDate(a.Fecha) - parseLocalDate(b.Fecha));
     const vals = arr.map(r=>r.Indice);
     const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
     const variance = vals.reduce((a,b)=>a+(b-mean)*(b-mean),0)/Math.max(vals.length-1,1);
@@ -1045,8 +1045,23 @@ function radarNormalize(row){
 /* ============ FORMAT HELPERS ============ */
 function fmt1(v){ return (Math.round(v*10)/10).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1}); }
 function fmt0(v){ return Math.round(v).toLocaleString('es-AR'); }
+/* Convierte un string 'YYYY-MM-DD' (o un Date ya existente) en un Date de
+   medianoche en la ZONA HORARIA LOCAL del navegador. Usar SIEMPRE esta
+   funcion (y nunca "new Date('YYYY-MM-DD')" directo) para leer las fechas
+   del dataset: "new Date('YYYY-MM-DD')" las interpreta como UTC, lo que en
+   Argentina (UTC-3) hace que se muestren un dia antes del real. */
+function parseLocalDate(input){
+  if(input instanceof Date) return new Date(input.getFullYear(), input.getMonth(), input.getDate());
+  const s = String(input);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m){
+    return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+  }
+  return new Date(s);
+}
+
 function fmtDate(d){
-  const dt = new Date(d);
+  const dt = parseLocalDate(d);
   const dd = String(dt.getDate()).padStart(2,'0');
   const mm = String(dt.getMonth()+1).padStart(2,'0');
   const yyyy = dt.getFullYear();
@@ -1093,8 +1108,8 @@ function renderProximoPartido(){
   const hoy = new Date();
   hoy.setHours(0,0,0,0);
   const proximos = SIC_FIXTURE_2026
-    .filter(p => new Date(p.fecha+'T00:00:00') >= hoy)
-    .sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
+    .filter(p => parseLocalDate(p.fecha) >= hoy)
+    .sort((a,b)=> parseLocalDate(a.fecha) - parseLocalDate(b.fecha));
   const partido = proximos[0];
   if(!partido){
     widget.style.display = 'none';
@@ -1255,10 +1270,12 @@ document.addEventListener('click', (e)=>{
 
 /* ============ TIMELINE ============ */
 function dayIndex(dateStr){
-  return Math.floor(new Date(dateStr).getTime()/86400000);
+  const dt = parseLocalDate(dateStr);
+  return Math.floor(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate())/86400000);
 }
 function dayIndexToDate(idx){
-  return new Date(idx*86400000);
+  const utc = new Date(idx*86400000);
+  return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
 }
 function fmtShortDate(idx){
   return fmtDate(dayIndexToDate(idx));
@@ -1305,7 +1322,7 @@ function renderTimelineMarkers(scope){
   const range = Math.max(max-min,1);
   const seen = new Set();
   const uniqueActs = [];
-  scope.slice().sort((a,b)=> new Date(a.Fecha)-new Date(b.Fecha)).forEach(r=>{
+  scope.slice().sort((a,b)=> parseLocalDate(a.Fecha)-parseLocalDate(b.Fecha)).forEach(r=>{
     if(seen.has(r.Actividad)) return;
     seen.add(r.Actividad);
     uniqueActs.push(r);
@@ -1498,7 +1515,7 @@ function renderGauge(value, maxScale){
 
 /* ============ WEEKLY AGG (bar+line) ============ */
 function isoWeekKey(dateStr){
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   d.setHours(0,0,0,0);
   const day = (d.getDay()+6)%7;
   d.setDate(d.getDate()-day);
@@ -1825,7 +1842,7 @@ function renderKpiCards(filtered, f, fullDataInSeason){
       kpi3foot.textContent='Cantidad de actividades, dentro de la seleccion, cuyo cambio de indice respecto de la actividad anterior del mismo jugador supera su Smallest Worthwhile Change.';
     }
   } else {
-    const sorted = filtered.slice().sort((a,b)=> new Date(b.Fecha)-new Date(a.Fecha));
+    const sorted = filtered.slice().sort((a,b)=> parseLocalDate(b.Fecha)-parseLocalDate(a.Fecha));
     const last = sorted[0];
     if(!last || last.DeltaIndice===null || last.DeltaIndice===undefined){
       kpi3val.textContent='\u2014'; kpi3val.className='delta-value flat';
@@ -1872,7 +1889,7 @@ function medalSpan(medal){
 }
 
 function renderTable(filtered){
-  const sorted = filtered.slice().sort((a,b)=> new Date(b.Fecha)-new Date(a.Fecha));
+  const sorted = filtered.slice().sort((a,b)=> parseLocalDate(b.Fecha)-parseLocalDate(a.Fecha));
   const medals = computeMedals(filtered);
   const totalPages = Math.max(1, Math.ceil(sorted.length/ROWS_PER_PAGE));
   if(currentPage>totalPages) currentPage = totalPages;
@@ -1927,7 +1944,7 @@ function rowLabel(r){
 
 function populateSesionSelect(selectId, jugador){
   const sel = document.getElementById(selectId);
-  const rows = DATASET.filter(r=>r.Jugador===jugador).sort((a,b)=> new Date(b.Fecha)-new Date(a.Fecha));
+  const rows = DATASET.filter(r=>r.Jugador===jugador).sort((a,b)=> parseLocalDate(b.Fecha)-parseLocalDate(a.Fecha));
   sel.innerHTML = rows.map(r=>`<option value="${r.__id}">${rowLabel(r).replace(/</g,'&lt;')}</option>`).join('');
 }
 
@@ -2317,7 +2334,7 @@ function renderPuestoPodio(filtered){
 
 /* ============ PRINT: FULL TABLE (all filtered rows, no pagination) ============ */
 function renderPrintTable(filtered){
-  const sorted = filtered.slice().sort((a,b)=> new Date(b.Fecha)-new Date(a.Fecha));
+  const sorted = filtered.slice().sort((a,b)=> parseLocalDate(b.Fecha)-parseLocalDate(a.Fecha));
   const medals = computeMedals(filtered);
   const holder = document.getElementById('print-full-table');
   if(sorted.length===0){ holder.innerHTML = ''; return; }
