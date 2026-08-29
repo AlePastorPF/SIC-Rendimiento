@@ -285,6 +285,7 @@ function getFilterValues(){
     tipo: document.getElementById('f-tipo').value,
     actividad: getCheckedValues(document.getElementById('f-actividad-list')),
     jugador: getCheckedValues(document.getElementById('f-jugador-list')),
+    puesto: getCheckedValues(document.getElementById('f-puesto-list')),
     timelineStart: tStart,
     timelineEnd: tEnd
   };
@@ -296,6 +297,7 @@ function applyFilters(data, f){
     if(f.tipo!=='__ALL__' && r.Tipo!==f.tipo) return false;
     if(f.actividad.length>0 && !f.actividad.includes(r.Actividad)) return false;
     if(f.jugador.length>0 && !f.jugador.includes(r.Jugador)) return false;
+    if(f.puesto.length>0 && !f.puesto.includes(r.Puesto)) return false;
     if(f.timelineStart!==null && f.timelineEnd!==null){
       const di = dayIndex(r.Fecha);
       if(di<f.timelineStart || di>f.timelineEnd) return false;
@@ -510,6 +512,12 @@ function refreshActividadYJugadorOptions(keepSelection){
   const jugadores = [...new Set(scoped.map(r=>r.Jugador))].sort();
   populateCheckboxList('f-jugador-list', jugadores, keepSelection);
   updateDropdownLabel('f-jugador-list','f-jugador-label','Todos los jugadores');
+
+  const puestosPresentes = [...new Set(scoped.map(r=>r.Puesto).filter(p=>p && p.trim()!==''))];
+  const puestos = POSITION_ORDER.filter(p=>puestosPresentes.includes(p))
+    .concat(puestosPresentes.filter(p=>!POSITION_ORDER.includes(p)).sort());
+  populateCheckboxList('f-puesto-list', puestos, keepSelection);
+  updateDropdownLabel('f-puesto-list','f-puesto-label','Todos los puestos');
 }
 
 /* ============ GAUGE (SVG speedometer) ============ */
@@ -1623,6 +1631,12 @@ async function initApp(){
     dropdownId:'f-jugador-dropdown', toggleId:'f-jugador-toggle', panelId:'f-jugador-panel',
     listId:'f-jugador-list', searchId:'f-jugador-search', labelId:'f-jugador-label',
     allLabel:'Todos los jugadores',
+    onChange: ()=>{ try{ renderAll(); }catch(e){ console.error('renderAll error', e); } }
+  });
+  wireCheckboxDropdown({
+    dropdownId:'f-puesto-dropdown', toggleId:'f-puesto-toggle', panelId:'f-puesto-panel',
+    listId:'f-puesto-list', searchId:null, labelId:'f-puesto-label',
+    allLabel:'Todos los puestos',
     onChange: ()=>{ try{ renderAll(); }catch(e){ console.error('renderAll error', e); } }
   });
 
