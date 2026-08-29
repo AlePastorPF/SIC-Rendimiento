@@ -47,16 +47,22 @@ const OPPONENT_PATTERNS = [
   {re:/los\s*tilos/i, key:'LosTilos'},
   {re:/san\s*luis/i, key:'SanLuis'},
   {re:/\blprc\b/i, key:'LaPlata'},
+  {re:/la\s*plata/i, key:'LaPlata'},
   {re:/\blmrc\b/i, key:'LosMatreros'},
+  {re:/los\s*matreros/i, key:'LosMatreros'},
   {re:/plaza/i, key:'Plaza'},
   {re:/\bcrbv\b/i, key:'CRBV'},
+  {re:/regatas\s*bella\s*vista/i, key:'CRBV'},
   {re:/\bcuba\b/i, key:'CUBA'},
   {re:/\bcasi\b/i, key:'CASI'},
   {re:/\bbac\b/i, key:'BAC'},
+  {re:/belgrano\s*athletic/i, key:'BAC'},
   {re:/hindu/i, key:'Hindu'},
   {re:/newman/i, key:'Newman'},
   {re:/alumni/i, key:'Alumni'},
-  {re:/\bba\b/i, key:'BA'}
+  {re:/atl[eé]tico\s*del\s*rosario/i, key:'AtleticoRosario'},
+  {re:/\bba\b/i, key:'BA'},
+  {re:/buenos\s*aires\s*c\s*&?\s*rc/i, key:'BA'}
 ];
 function opponentLogoKey(actividad){
   for(const p of OPPONENT_PATTERNS){
@@ -256,6 +262,69 @@ function fmtDate(d){
   const yyyy = dt.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
 }
+
+/* ============ PROXIMO PARTIDO (fixture oficial URBA Top 14 2026) ============ */
+/* Fuente: fixture publicado por URBA para la Division Superior Top 14 2026
+   (urba.org.ar/fixture). Se actualiza a mano cuando URBA publique cambios de
+   fecha; el partido que se muestra se calcula solo, comparando la fecha de
+   hoy contra este calendario completo (no hace falta tocar esto cada semana). */
+const SIC_FIXTURE_2026 = [
+  {fecha:'2026-03-14', rival:'Belgrano Athletic', condicion:'Local'},
+  {fecha:'2026-03-21', rival:'Los Matreros', condicion:'Local'},
+  {fecha:'2026-03-28', rival:'Newman', condicion:'Visitante'},
+  {fecha:'2026-04-11', rival:'Alumni', condicion:'Local'},
+  {fecha:'2026-04-18', rival:'Champagnat', condicion:'Visitante'},
+  {fecha:'2026-04-25', rival:'Hindu', condicion:'Local'},
+  {fecha:'2026-05-09', rival:'La Plata', condicion:'Visitante'},
+  {fecha:'2026-05-16', rival:'Regatas Bella Vista', condicion:'Local'},
+  {fecha:'2026-05-23', rival:'Atletico del Rosario', condicion:'Visitante'},
+  {fecha:'2026-05-30', rival:'Los Tilos', condicion:'Local'},
+  {fecha:'2026-06-06', rival:'CASI', condicion:'Visitante'},
+  {fecha:'2026-06-20', rival:'CUBA', condicion:'Local'},
+  {fecha:'2026-06-27', rival:'Buenos Aires C&RC', condicion:'Visitante'},
+  {fecha:'2026-07-04', rival:'Belgrano Athletic', condicion:'Visitante'},
+  {fecha:'2026-07-11', rival:'Los Matreros', condicion:'Visitante'},
+  {fecha:'2026-07-18', rival:'Newman', condicion:'Local'},
+  {fecha:'2026-08-01', rival:'Alumni', condicion:'Visitante'},
+  {fecha:'2026-08-15', rival:'Champagnat', condicion:'Local'},
+  {fecha:'2026-08-22', rival:'Hindu', condicion:'Visitante'},
+  {fecha:'2026-08-29', rival:'La Plata', condicion:'Local'},
+  {fecha:'2026-09-05', rival:'Regatas Bella Vista', condicion:'Visitante'},
+  {fecha:'2026-09-12', rival:'Atletico del Rosario', condicion:'Local'},
+  {fecha:'2026-09-26', rival:'Los Tilos', condicion:'Visitante'},
+  {fecha:'2026-10-03', rival:'CASI', condicion:'Local'},
+  {fecha:'2026-10-10', rival:'CUBA', condicion:'Visitante'},
+  {fecha:'2026-10-17', rival:'Buenos Aires C&RC', condicion:'Local'}
+];
+
+function renderProximoPartido(){
+  const widget = document.getElementById('proximo-partido-widget');
+  if(!widget) return;
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  const proximos = SIC_FIXTURE_2026
+    .filter(p => new Date(p.fecha+'T00:00:00') >= hoy)
+    .sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
+  const partido = proximos[0];
+  if(!partido){
+    widget.style.display = 'none';
+    return;
+  }
+  const key = opponentLogoKey(partido.rival);
+  const logoSrc = LOGOS_B64[key] ? ('data:image/png;base64,'+LOGOS_B64[key]) : ('data:image/png;base64,'+LOGOS_B64['SIC']);
+  widget.innerHTML = `
+    <div class="proximo-label">Proximo partido</div>
+    <div class="proximo-body">
+      <img src="${logoSrc}" alt="${partido.rival}" title="${partido.rival}">
+      <div class="proximo-info">
+        <span class="proximo-condicion proximo-${partido.condicion.toLowerCase()}">${partido.condicion}</span>
+        <span class="proximo-fecha">${fmtDate(partido.fecha)}</span>
+      </div>
+    </div>
+  `;
+  widget.style.display = 'flex';
+}
+
 function shortName(name){
   const parts = name.trim().split(/\s+/);
   if(parts.length===1) return parts[0];
@@ -1625,6 +1694,7 @@ function handleFile(file){
 
 /* ============ INIT ============ */
 async function initApp(){
+  try{ renderProximoPartido(); }catch(e){ console.error('proximo partido error', e); }
   document.getElementById('btn-print').addEventListener('click', ()=>{
     try{ renderPrintTable(lastFilteredForPrint); }catch(e){ console.error('print table error', e); }
     try{

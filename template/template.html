@@ -107,6 +107,28 @@ body{
 .brand-text h1{color:#fff;font-size:22px;font-weight:700;letter-spacing:.5px;line-height:1.1;}
 .brand-text span{color:var(--celeste);font-size:11.5px;letter-spacing:2.5px;text-transform:uppercase;font-weight:600;}
 .topbar-actions{display:flex;align-items:center;gap:12px;position:relative;z-index:1;}
+
+.proximo-partido-widget{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  z-index:1;align-items:center;gap:12px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:8px 16px 8px 10px;
+}
+.proximo-label{
+  font-size:9.5px;font-weight:700;color:var(--celeste);text-transform:uppercase;
+  letter-spacing:1px;margin-bottom:3px;text-align:center;
+}
+.proximo-body{display:flex;align-items:center;gap:10px;}
+.proximo-body img{width:34px;height:34px;object-fit:contain;background:#fff;border-radius:6px;padding:3px;flex-shrink:0;}
+.proximo-info{display:flex;flex-direction:column;gap:2px;}
+.proximo-condicion{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  padding:1px 8px;border-radius:8px;width:fit-content;
+}
+.proximo-condicion.proximo-local{background:rgba(47,168,222,.22);color:var(--celeste);}
+.proximo-condicion.proximo-visitante{background:rgba(255,255,255,.14);color:#E8EEF2;}
+.proximo-fecha{font-size:13px;font-weight:700;color:#fff;}
+@media(max-width:820px){.proximo-partido-widget{display:none !important;}}
 .pill{
   font-size:11px;color:#B7C2CC;background:rgba(255,255,255,.07);
   padding:6px 13px;border-radius:20px;letter-spacing:.4px;border:1px solid rgba(255,255,255,.06);
@@ -491,6 +513,7 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
         <span>SIC</span>
       </div>
     </div>
+    <div class="proximo-partido-widget" id="proximo-partido-widget" style="display:none;"></div>
     <div class="topbar-actions">
       <span class="pill" id="last-update-pill">Datos cargados</span>
       <button class="btn-print" id="btn-print" onclick="try{window.print();}catch(e){console.error(e);}">
