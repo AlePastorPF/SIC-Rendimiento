@@ -60,7 +60,7 @@ const OPPONENT_PATTERNS = [
   {re:/hindu/i, key:'Hindu'},
   {re:/newman/i, key:'Newman'},
   {re:/alumni/i, key:'Alumni'},
-  {re:/atl[eé]tico\s*del\s*rosario/i, key:'AtleticoRosario'},
+  {re:/atl[eé]tico\s*del\s*rosario/i, key:'Plaza'},
   {re:/\bba\b/i, key:'BA'},
   {re:/buenos\s*aires\s*c\s*&?\s*rc/i, key:'BA'}
 ];
