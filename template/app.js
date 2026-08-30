@@ -1506,6 +1506,13 @@ function top4For(base, n){
   return base.slice().sort((a,b)=>b.Indice-a.Indice).slice(0, n||4);
 }
 
+function mostRecentActividadRows(rows){
+  if(rows.length===0) return [];
+  let best = rows[0];
+  rows.forEach(r=>{ if(parseLocalDate(r.Fecha) > parseLocalDate(best.Fecha)) best = r; });
+  return rows.filter(r=> r.Actividad===best.Actividad && r.Temporada===best.Temporada && r.Fecha===best.Fecha);
+}
+
 function renderTop4(f){
   const container = document.getElementById('top4-container');
   if(!container) return;
@@ -1516,15 +1523,22 @@ function renderTop4(f){
   const selectedJugadores = [...getSelectedTop4Jugadores()];
 
   if(selectedJugadores.length===0){
-    // Comportamiento original: un solo grupo, respetando el filtro principal de jugador si esta activo.
+    // Sin jugadores elegidos: los 4 indices mas altos entre los jugadores de la ULTIMA actividad
+    // (en vez de repetir al mismo jugador si domina el historico completo).
     let base = basePartidos;
     if(f.jugador.length>0) base = base.filter(r=>f.jugador.includes(r.Jugador));
-    const top = top4For(base, 4);
+    const ultimaActividadRows = mostRecentActividadRows(base);
+    const top = top4For(ultimaActividadRows, 4);
     if(top.length===0){
       container.innerHTML = '<div class="empty-state">No hay partidos para los filtros seleccionados.</div>';
       return;
     }
-    container.innerHTML = `<div class="top4-grid">${top.map((r,i)=>top4CardHtml(r,i)).join('')}</div>`;
+    const sample = ultimaActividadRows[0];
+    const rival = sample.Actividad.replace(/^SIC\s*vs\s*/i,'').replace(/^@?\s*SIC.*/i, 'SIC (local)');
+    container.innerHTML = `
+      <div class="chart-note screen-only-note" style="margin-bottom:10px;">Ultima actividad: <b>vs. ${rival} \u00b7 ${fmtDate(sample.Fecha)}</b> &mdash; los 4 indices de exigencia mas altos de ese partido. Elegi uno o mas jugadores arriba para ver el top 4 historico de cada uno.</div>
+      <div class="top4-grid">${top.map((r,i)=>top4CardHtml(r,i)).join('')}</div>
+    `;
     return;
   }
 
