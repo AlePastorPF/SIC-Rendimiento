@@ -1146,48 +1146,103 @@ function renderTable(filtered){
 
 /* ============ RADAR COMPARISON: UI ============ */
 let radarCharts = { a:null, b:null };
-let ROW_BY_ID = {};
 
-function rowLabel(r){
-  return `${r.Actividad} \u2014 ${fmtDate(r.Fecha)} (${r.Tipo==='Partido'?'Partido':'Entren.'})`;
+function computeAverageRow(rows){
+  const keys = ['Contactos','Distancia','EsfExpl','RHIE','HSR','BiG','MaxVel'];
+  const avg = {};
+  keys.forEach(k=>{ avg[k] = rows.reduce((s,r)=>s+(r[k]||0),0)/rows.length; });
+  return avg;
 }
 
-function populateSesionSelect(selectId, jugador){
-  const sel = document.getElementById(selectId);
-  const rows = DATASET.filter(r=>r.Jugador===jugador).sort((a,b)=> parseLocalDate(b.Fecha)-parseLocalDate(a.Fecha));
-  sel.innerHTML = rows.map(r=>`<option value="${r.__id}">${rowLabel(r).replace(/</g,'&lt;')}</option>`).join('');
+/* Clave compuesta Actividad+Temporada+Fecha: algunos nombres de actividad se
+   repiten (entre temporadas, o incluso dentro de la misma temporada en
+   partidos de ida/vuelta), asi que usamos esta clave unica para no mezclar
+   ocasiones distintas bajo un mismo nombre. */
+function radarActKey(r){
+  return `${r.Actividad}\u241E${r.Temporada}\u241E${r.Fecha}`;
+}
+function parseRadarActKey(key){
+  const [actividad, temporada, fecha] = key.split('\u241E');
+  return {actividad, temporada, fecha};
+}
+
+function getRadarGroup(side){
+  const jugadores = getCheckedValues(document.getElementById(`radar-jugador-${side}-list`));
+  const actKeys = getCheckedValues(document.getElementById(`radar-actividad-${side}-list`));
+  const actSet = new Set(actKeys);
+  const rows = DATASET.filter(r=>{
+    if(jugadores.length>0 && !jugadores.includes(r.Jugador)) return false;
+    if(actSet.size>0 && !actSet.has(radarActKey(r))) return false;
+    return true;
+  });
+  return {jugadores, actKeys, rows};
+}
+
+function describeGroup(jugadores, actKeys, rows){
+  const jugLabel = jugadores.length===0 ? 'Todos los jugadores' : jugadores.length===1 ? jugadores[0] : `${jugadores.length} jugadores`;
+  let actLabel;
+  if(actKeys.length===0){
+    actLabel = 'todas las actividades';
+  } else if(actKeys.length===1){
+    const {actividad, fecha} = parseRadarActKey(actKeys[0]);
+    actLabel = `${actividad} (${fmtDate(fecha)})`;
+  } else {
+    actLabel = `${actKeys.length} actividades`;
+  }
+  const base = `${jugLabel} \u2014 ${actLabel}`;
+  return rows.length>1 ? `${base} \u00b7 promedio de ${rows.length}` : base;
+}
+
+function populateRadarJugadorList(side){
+  const jugadores = [...new Set(DATASET.map(r=>r.Jugador))].sort();
+  populateCheckboxList(`radar-jugador-${side}-list`, jugadores, true);
+  updateDropdownLabel(`radar-jugador-${side}-list`, `radar-jugador-${side}-label`, 'Todos los jugadores');
+}
+
+function radarActividadOptionsOrdenadas(){
+  const byKey = {};
+  DATASET.forEach(r=>{
+    const key = radarActKey(r);
+    if(!byKey[key]) byKey[key] = r;
+  });
+  return Object.keys(byKey).sort((a,b)=> parseLocalDate(byKey[b].Fecha)-parseLocalDate(byKey[a].Fecha));
+}
+
+function populateRadarActividadList(side){
+  const list = document.getElementById(`radar-actividad-${side}-list`);
+  if(!list) return;
+  const prevChecked = new Set(getCheckedValues(list));
+  const keysOrdenadas = radarActividadOptionsOrdenadas();
+  const byKey = {};
+  DATASET.forEach(r=>{ const k=radarActKey(r); if(!byKey[k]) byKey[k]=r; });
+  list.innerHTML = keysOrdenadas.map(key=>{
+    const r = byKey[key];
+    const esc = key.replace(/"/g,'&quot;');
+    const checked = prevChecked.has(key) ? 'checked' : '';
+    const label = `${r.Actividad} (${fmtDate(r.Fecha)})`;
+    return `<label class="checkbox-item"><input type="checkbox" value="${esc}" ${checked}> ${label}</label>`;
+  }).join('');
+  updateDropdownLabel(`radar-actividad-${side}-list`, `radar-actividad-${side}-label`, 'Elegi una actividad');
 }
 
 function initComparisonSelectors(){
-  ROW_BY_ID = {};
-  DATASET.forEach(r=>{ ROW_BY_ID[r.__id]=r; });
+  populateRadarJugadorList('a');
+  populateRadarActividadList('a');
+  populateRadarJugadorList('b');
+  populateRadarActividadList('b');
 
-  const jugadores = [...new Set(DATASET.map(r=>r.Jugador))].sort();
-  const selJA = document.getElementById('radar-jugador-a');
-  const selJB = document.getElementById('radar-jugador-b');
-  const opts = jugadores.map(j=>`<option value="${j.replace(/"/g,'&quot;')}">${j}</option>`).join('');
-  selJA.innerHTML = opts;
-  selJB.innerHTML = opts;
+  const keysOrdenadas = radarActividadOptionsOrdenadas();
 
-  const sorted = DATASET.slice().sort((a,b)=>b.Indice-a.Indice);
-  const defaultA = sorted[0];
-  let defaultB = sorted.find(r=>r.Jugador===defaultA.Jugador && r.__id!==defaultA.__id) || sorted[1];
-
-  selJA.value = defaultA.Jugador;
-  populateSesionSelect('radar-sesion-a', defaultA.Jugador);
-  document.getElementById('radar-sesion-a').value = defaultA.__id;
-
-  selJB.value = defaultB.Jugador;
-  populateSesionSelect('radar-sesion-b', defaultB.Jugador);
-  document.getElementById('radar-sesion-b').value = defaultB.__id;
+  if(keysOrdenadas[0]){
+    const cbA = [...document.getElementById('radar-actividad-a-list').querySelectorAll('input[type="checkbox"]')].find(c=>c.value===keysOrdenadas[0]);
+    if(cbA){ cbA.checked = true; updateDropdownLabel('radar-actividad-a-list','radar-actividad-a-label','Elegi una actividad'); }
+  }
+  if(keysOrdenadas[1]){
+    const cbB = [...document.getElementById('radar-actividad-b-list').querySelectorAll('input[type="checkbox"]')].find(c=>c.value===keysOrdenadas[1]);
+    if(cbB){ cbB.checked = true; updateDropdownLabel('radar-actividad-b-list','radar-actividad-b-label','Elegi una actividad'); }
+  }
 
   renderRadarComparison();
-}
-
-function getRadarSelection(side){
-  const jug = document.getElementById('radar-jugador-'+side).value;
-  const sesId = document.getElementById('radar-sesion-'+side).value;
-  return ROW_BY_ID[sesId] || DATASET.filter(r=>r.Jugador===jug)[0];
 }
 
 function radarRawValueText(row, key){
@@ -1279,14 +1334,7 @@ function drawSingleRadar(canvasId, row, colorMain, colorFill){
   return norm;
 }
 
-function sessionPhrase(row){
-  if(row.Tipo==='Entrenamiento'){
-    return `el entrenamiento del ${fmtDate(row.Fecha)}`;
-  }
-  return `el partido vs. ${shortActividad(row)} (${fmtDate(row.Fecha)})`;
-}
-
-function generateRadarInsights(rowA, rowB, normA, normB, sameJugador, sameSesion){
+function generateRadarInsights(normA, normB){
   const diffs = RADAR_METRICS.map(m=>({
     key:m.key, label:m.label,
     a:normA[m.key], b:normB[m.key],
@@ -1296,9 +1344,6 @@ function generateRadarInsights(rowA, rowB, normA, normB, sameJugador, sameSesion
   const notable = diffs.filter(d=>Math.abs(d.delta)>=12).slice(0,4);
   const trivial = diffs.filter(d=>Math.abs(d.delta)<5).length;
 
-  const nameA = sameJugador ? sessionPhrase(rowA) : rowA.Jugador;
-  const nameB = sameJugador ? sessionPhrase(rowB) : rowB.Jugador;
-
   const sumA = RADAR_METRICS.reduce((s,m)=>s+normA[m.key],0);
   const sumB = RADAR_METRICS.reduce((s,m)=>s+normB[m.key],0);
   const overallDiff = sumA-sumB;
@@ -1306,13 +1351,13 @@ function generateRadarInsights(rowA, rowB, normA, normB, sameJugador, sameSesion
   let html = '';
   let summary;
   if(notable.length===0){
-    summary = `Perfiles fisicos muy similares: ninguna variable muestra una diferencia relevante entre ${nameA} y ${nameB}.`;
+    summary = `Perfiles fisicos muy similares: ninguna variable muestra una diferencia relevante entre el grafico A y el grafico B.`;
   } else if(Math.abs(overallDiff) < 15){
-    summary = `Demanda fisica global similar entre ${nameA} y ${nameB}, aunque con diferencias puntuales en algunos indicadores.`;
+    summary = `Demanda fisica global similar entre ambos graficos, aunque con diferencias puntuales en algunos indicadores.`;
   } else if(overallDiff>0){
-    summary = `${sameJugador ? 'La sesion A' : nameA} mostro, en conjunto, una demanda fisica mayor que ${sameJugador ? 'la sesion B' : nameB}.`;
+    summary = `El grafico A mostro, en conjunto, una demanda fisica mayor que el grafico B.`;
   } else {
-    summary = `${sameJugador ? 'La sesion B' : nameB} mostro, en conjunto, una demanda fisica mayor que ${sameJugador ? 'la sesion A' : nameA}.`;
+    summary = `El grafico B mostro, en conjunto, una demanda fisica mayor que el grafico A.`;
   }
   html += `<div class="insight-summary">${summary}</div>`;
 
@@ -1320,12 +1365,10 @@ function generateRadarInsights(rowA, rowB, normA, normB, sameJugador, sameSesion
     html += '<h4>Diferencias mas relevantes</h4><ul>';
     notable.forEach(d=>{
       const winner = d.delta>0 ? 'A' : 'B';
-      const winnerName = winner==='A' ? nameA : nameB;
-      const loserName = winner==='A' ? nameB : nameA;
       const magnitude = Math.abs(d.delta)>=35 ? 'muy superior' : Math.abs(d.delta)>=20 ? 'notablemente superior' : 'superior';
       const winnerVal = winner==='A' ? d.a : d.b;
       const loserVal = winner==='A' ? d.b : d.a;
-      html += `<li><b>${d.label}</b>: ${winnerName} fue ${magnitude} a ${loserName} (${fmt1(winnerVal)} vs ${fmt1(loserVal)} sobre 100).</li>`;
+      html += `<li><b>${d.label}</b>: el grafico ${winner} fue ${magnitude} (${fmt1(winnerVal)} vs ${fmt1(loserVal)} sobre 100).</li>`;
     });
     html += '</ul>';
   }
@@ -1333,36 +1376,51 @@ function generateRadarInsights(rowA, rowB, normA, normB, sameJugador, sameSesion
   if(trivial===RADAR_METRICS.length){
     html += `<div style="margin-top:8px;color:var(--gris-claro);">No se detectaron patrones destacables: todas las variables estan dentro de un rango comparable.</div>`;
   } else if(notable.length>=3){
-    html += `<div style="margin-top:8px;">Patron a destacar: ${sameJugador ? 'la sesion con valores mas altos' : (overallDiff>0?nameA:nameB)} concentra ventajas en ${notable.length} de los 6 indicadores analizados, lo que sugiere una carga fisica global mas exigente en esa sesion.</div>`;
+    html += `<div style="margin-top:8px;">Patron a destacar: el grafico ${overallDiff>0?'A':'B'} concentra ventajas en ${notable.length} de los ${RADAR_METRICS.length} indicadores analizados.</div>`;
   }
 
   return html;
 }
 
 function renderRadarComparison(){
-  const rowA = getRadarSelection('a');
-  const rowB = getRadarSelection('b');
-  if(!rowA || !rowB) return;
+  const groupA = getRadarGroup('a');
+  const groupB = getRadarGroup('b');
 
-  document.getElementById('radar-title-a').textContent = `${rowA.Jugador} \u2014 ${rowA.Actividad} (${fmtDate(rowA.Fecha)})`;
-  document.getElementById('radar-title-b').textContent = `${rowB.Jugador} \u2014 ${rowB.Actividad} (${fmtDate(rowB.Fecha)})`;
-
-  const normA = drawSingleRadar('chart-radar-a', rowA, '#2FA8DE', 'rgba(47,168,222,0.28)');
-  const normB = drawSingleRadar('chart-radar-b', rowB, '#14171A', 'rgba(20,23,26,0.16)');
-
-  const sameJugador = rowA.Jugador===rowB.Jugador;
-  const sameSesion = rowA.Actividad===rowB.Actividad && rowA.Fecha===rowB.Fecha;
-
+  const titleAEl = document.getElementById('radar-title-a');
+  const titleBEl = document.getElementById('radar-title-b');
   const badge = document.getElementById('radar-comparison-type');
-  if(sameJugador){
-    badge.textContent = `Mismo jugador, distintas sesiones \u2014 ${rowA.Jugador}`;
-  } else if(sameSesion){
-    badge.textContent = `Distintos jugadores, misma sesion \u2014 ${rowA.Actividad} (${fmtDate(rowA.Fecha)})`;
-  } else {
-    badge.textContent = `Comparacion general \u2014 ${rowA.Jugador} vs ${rowB.Jugador}`;
+  const insights = document.getElementById('radar-insights');
+
+  if(groupA.rows.length===0 || groupB.rows.length===0){
+    titleAEl.textContent = groupA.rows.length===0 ? 'Sin datos para esta seleccion' : describeGroup(groupA.jugadores, groupA.actKeys, groupA.rows);
+    titleBEl.textContent = groupB.rows.length===0 ? 'Sin datos para esta seleccion' : describeGroup(groupB.jugadores, groupB.actKeys, groupB.rows);
+    badge.textContent = '';
+    insights.innerHTML = '<div class="empty-state">Elegi al menos una actividad (y opcionalmente uno o mas jugadores) en cada grafico para poder comparar.</div>';
+    if(radarCharts.a){ radarCharts.a.destroy(); radarCharts.a=null; }
+    if(radarCharts.b){ radarCharts.b.destroy(); radarCharts.b=null; }
+    return;
   }
 
-  document.getElementById('radar-insights').innerHTML = generateRadarInsights(rowA, rowB, normA, normB, sameJugador, sameSesion);
+  const avgA = computeAverageRow(groupA.rows);
+  const avgB = computeAverageRow(groupB.rows);
+
+  titleAEl.textContent = describeGroup(groupA.jugadores, groupA.actKeys, groupA.rows);
+  titleBEl.textContent = describeGroup(groupB.jugadores, groupB.actKeys, groupB.rows);
+
+  const normA = drawSingleRadar('chart-radar-a', avgA, '#2FA8DE', 'rgba(47,168,222,0.28)');
+  const normB = drawSingleRadar('chart-radar-b', avgB, '#14171A', 'rgba(20,23,26,0.16)');
+
+  const sameJugadorSingle = groupA.jugadores.length===1 && groupB.jugadores.length===1 && groupA.jugadores[0]===groupB.jugadores[0];
+  const sameActividadSingle = groupA.actKeys.length===1 && groupB.actKeys.length===1 && groupA.actKeys[0]===groupB.actKeys[0];
+  if(sameJugadorSingle){
+    badge.textContent = `Mismo jugador, distintas actividades \u2014 ${groupA.jugadores[0]}`;
+  } else if(sameActividadSingle){
+    badge.textContent = `Misma actividad, distintos grupos de jugadores \u2014 ${parseRadarActKey(groupA.actKeys[0]).actividad}`;
+  } else {
+    badge.textContent = 'Comparacion general';
+  }
+
+  insights.innerHTML = generateRadarInsights(normA, normB);
 }
 
 /* ============ TOP 4 MOST DEMANDING MATCHES ============ */
@@ -1805,16 +1863,20 @@ async function initApp(){
     renderAll();
   });
 
-  document.getElementById('radar-jugador-a').addEventListener('change', ()=>{
-    populateSesionSelect('radar-sesion-a', document.getElementById('radar-jugador-a').value);
-    renderRadarComparison();
+  ['a','b'].forEach(side=>{
+    wireCheckboxDropdown({
+      dropdownId:`radar-jugador-${side}-dropdown`, toggleId:`radar-jugador-${side}-toggle`, panelId:`radar-jugador-${side}-panel`,
+      listId:`radar-jugador-${side}-list`, searchId:`radar-jugador-${side}-search`, labelId:`radar-jugador-${side}-label`,
+      allLabel:'Todos los jugadores',
+      onChange: ()=>{ try{ renderRadarComparison(); }catch(e){ console.error('radar render error', e); } }
+    });
+    wireCheckboxDropdown({
+      dropdownId:`radar-actividad-${side}-dropdown`, toggleId:`radar-actividad-${side}-toggle`, panelId:`radar-actividad-${side}-panel`,
+      listId:`radar-actividad-${side}-list`, searchId:`radar-actividad-${side}-search`, labelId:`radar-actividad-${side}-label`,
+      allLabel:'Elegi una actividad',
+      onChange: ()=>{ try{ renderRadarComparison(); }catch(e){ console.error('radar render error', e); } }
+    });
   });
-  document.getElementById('radar-jugador-b').addEventListener('change', ()=>{
-    populateSesionSelect('radar-sesion-b', document.getElementById('radar-jugador-b').value);
-    renderRadarComparison();
-  });
-  document.getElementById('radar-sesion-a').addEventListener('change', renderRadarComparison);
-  document.getElementById('radar-sesion-b').addEventListener('change', renderRadarComparison);
 
   document.getElementById('page-prev').addEventListener('click', ()=>{
     if(currentPage>1){ currentPage--; renderTable(applyFilters(DATASET, getFilterValues())); }

@@ -229,6 +229,7 @@ body{
 .radar-selector-tag.tag-a{background:linear-gradient(135deg,var(--celeste),var(--celeste-dark));}
 .radar-selector-tag.tag-b{background:linear-gradient(135deg,#14171A,#3A4148);}
 .radar-selector-fields{display:flex;flex-direction:column;gap:6px;flex:1;}
+.radar-selector-fields .checkbox-dropdown{min-width:0;width:100%;}
 .radar-selector-fields select{
   padding:8px 10px;border:1.5px solid var(--borde);border-radius:7px;font-size:12.5px;font-family:inherit;
   background:#fdfdfe;color:var(--negro);
@@ -685,19 +686,56 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
         <div class="radar-selector-block">
           <div class="radar-selector-tag tag-a">A</div>
           <div class="radar-selector-fields">
-            <select id="radar-jugador-a"></select>
-            <select id="radar-sesion-a"></select>
+            <div class="checkbox-dropdown" id="radar-jugador-a-dropdown">
+              <button type="button" class="checkbox-dropdown-toggle" id="radar-jugador-a-toggle">
+                <span id="radar-jugador-a-label">Todos los jugadores</span>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="checkbox-dropdown-panel" id="radar-jugador-a-panel" hidden>
+                <input type="text" id="radar-jugador-a-search" placeholder="Buscar jugador...">
+                <div class="checkbox-list" id="radar-jugador-a-list"></div>
+              </div>
+            </div>
+            <div class="checkbox-dropdown" id="radar-actividad-a-dropdown">
+              <button type="button" class="checkbox-dropdown-toggle" id="radar-actividad-a-toggle">
+                <span id="radar-actividad-a-label">Elegi una actividad</span>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="checkbox-dropdown-panel" id="radar-actividad-a-panel" hidden>
+                <input type="text" id="radar-actividad-a-search" placeholder="Buscar actividad...">
+                <div class="checkbox-list" id="radar-actividad-a-list"></div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="radar-vs">VS</div>
         <div class="radar-selector-block">
           <div class="radar-selector-tag tag-b">B</div>
           <div class="radar-selector-fields">
-            <select id="radar-jugador-b"></select>
-            <select id="radar-sesion-b"></select>
+            <div class="checkbox-dropdown" id="radar-jugador-b-dropdown">
+              <button type="button" class="checkbox-dropdown-toggle" id="radar-jugador-b-toggle">
+                <span id="radar-jugador-b-label">Todos los jugadores</span>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="checkbox-dropdown-panel" id="radar-jugador-b-panel" hidden>
+                <input type="text" id="radar-jugador-b-search" placeholder="Buscar jugador...">
+                <div class="checkbox-list" id="radar-jugador-b-list"></div>
+              </div>
+            </div>
+            <div class="checkbox-dropdown" id="radar-actividad-b-dropdown">
+              <button type="button" class="checkbox-dropdown-toggle" id="radar-actividad-b-toggle">
+                <span id="radar-actividad-b-label">Elegi una actividad</span>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="checkbox-dropdown-panel" id="radar-actividad-b-panel" hidden>
+                <input type="text" id="radar-actividad-b-search" placeholder="Buscar actividad...">
+                <div class="checkbox-list" id="radar-actividad-b-list"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+      <div class="chart-note screen-only-note" style="margin-bottom:10px;">Si dejas "Jugador" en Todos, se promedian todos los jugadores que participaron en la/s actividad/es elegidas. Podes elegir varias actividades y/o varios jugadores en cada grafico: siempre se promedia el conjunto resultante.</div>
       <div class="radar-comparison-badge" id="radar-comparison-type"></div>
       <div class="radar-grid">
         <div class="radar-panel">
