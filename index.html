@@ -674,8 +674,8 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
       </div>
     </div>
 
-    <div class="section-label"><div class="bar"></div><h2>Alerta de velocidad</h2><div class="desc">Jugadores sin alcanzar el 90% de su pico de velocidad de temporada en mas de 10 dias</div></div>
-    <div class="chart-note screen-only-note" style="margin-bottom:14px;">Se calcula sobre toda la temporada actual (no depende de los filtros de arriba) e incluye partidos y entrenamientos. Un jugador aparece aca si pasaron mas de 10 dias desde la ultima vez que alcanzo el 90% de su propia velocidad maxima registrada en la temporada.</div>
+    <div class="section-label"><div class="bar"></div><h2>Alerta de velocidad</h2><div class="desc">Jugadores entre 10 y 30 dias sin alcanzar el 90% de su pico de velocidad de temporada</div></div>
+    <div class="chart-note screen-only-note" style="margin-bottom:14px;">Se calcula sobre toda la temporada actual (no depende de los filtros de arriba) e incluye partidos y entrenamientos. Un jugador aparece aca si pasaron entre 10 y 30 dias desde la ultima vez que alcanzo el 90% de su propia velocidad maxima registrada en la temporada. Los que superan el mes se excluyen de la lista (se asume que ya no estan activos o que la alerta dejo de ser accionable).</div>
     <div id="speed-alert-container" class="speed-alert-card"></div>
 
     <div class="section-label"><div class="bar"></div><h2>Volumen semanal</h2><div class="desc">Distancia total (columnas) y esfuerzos explosivos (linea)</div></div>
@@ -1222,13 +1222,13 @@ function renderSpeedAlert(){
     if(qualifying.length===0) return;
     const lastHit = qualifying[0];
     const diasSince = Math.floor((hoy - parseLocalDate(lastHit.Fecha)) / 86400000);
-    if(diasSince>10){
+    if(diasSince>10 && diasSince<=30){
       alerts.push({jugador, diasSince, lastFecha: lastHit.Fecha, seasonMaxVel, threshold});
     }
   });
 
   if(alerts.length===0){
-    container.innerHTML = `<div class="speed-alert-ok">\u2705 Todos los jugadores con datos de velocidad en la temporada ${currentSeason} alcanzaron al menos el 90% de su pico personal en los ultimos 10 dias.</div>`;
+    container.innerHTML = `<div class="speed-alert-ok">\u2705 Ningun jugador esta en la ventana de alerta: no hay nadie entre 10 y 30 dias sin alcanzar el 90% de su pico personal de la temporada ${currentSeason}.</div>`;
     return;
   }
 

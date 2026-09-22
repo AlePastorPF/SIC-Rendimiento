@@ -369,13 +369,13 @@ function renderSpeedAlert(){
     if(qualifying.length===0) return;
     const lastHit = qualifying[0];
     const diasSince = Math.floor((hoy - parseLocalDate(lastHit.Fecha)) / 86400000);
-    if(diasSince>10){
+    if(diasSince>10 && diasSince<=30){
       alerts.push({jugador, diasSince, lastFecha: lastHit.Fecha, seasonMaxVel, threshold});
     }
   });
 
   if(alerts.length===0){
-    container.innerHTML = `<div class="speed-alert-ok">\u2705 Todos los jugadores con datos de velocidad en la temporada ${currentSeason} alcanzaron al menos el 90% de su pico personal en los ultimos 10 dias.</div>`;
+    container.innerHTML = `<div class="speed-alert-ok">\u2705 Ningun jugador esta en la ventana de alerta: no hay nadie entre 10 y 30 dias sin alcanzar el 90% de su pico personal de la temporada ${currentSeason}.</div>`;
     return;
   }
 
