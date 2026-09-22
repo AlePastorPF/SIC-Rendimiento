@@ -407,6 +407,27 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
 .puesto-podio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 @media(max-width:920px){.puesto-podio-grid{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:600px){.puesto-podio-grid{grid-template-columns:1fr;}}
+
+.speed-alert-card{
+  background:var(--blanco);border:1px solid var(--borde);border-radius:12px;
+  padding:6px 6px;box-shadow:var(--shadow-sm);overflow:hidden;
+}
+.speed-alert-ok{
+  display:flex;align-items:center;gap:10px;padding:16px 18px;
+  color:var(--verde);font-size:13px;font-weight:600;
+}
+.speed-alert-item{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:13px 16px;border-radius:8px;
+}
+.speed-alert-item + .speed-alert-item{border-top:1px solid var(--fondo);}
+.speed-alert-jugador{font-size:13px;font-weight:700;color:var(--negro);flex-shrink:0;min-width:170px;}
+.speed-alert-detail{font-size:12px;color:var(--gris);flex:1;line-height:1.5;}
+.speed-alert-dias{
+  display:inline-block;font-weight:700;padding:2px 9px;border-radius:10px;margin-right:6px;
+  background:#FBEAE8;color:var(--rojo);
+}
+.speed-alert-dias.warn-mid{background:#FDF3E3;color:#B8791A;}
 .puesto-podio-card{
   background:var(--blanco);border:1px solid var(--borde);border-radius:12px;
   padding:16px 18px;box-shadow:var(--shadow-sm);
@@ -652,6 +673,10 @@ footer{text-align:center;padding:30px 20px 44px;font-size:11.5px;color:var(--gri
         </div>
       </div>
     </div>
+
+    <div class="section-label"><div class="bar"></div><h2>Alerta de velocidad</h2><div class="desc">Jugadores sin alcanzar el 90% de su pico de velocidad de temporada en mas de 10 dias</div></div>
+    <div class="chart-note screen-only-note" style="margin-bottom:14px;">Se calcula sobre toda la temporada actual (no depende de los filtros de arriba) e incluye partidos y entrenamientos. Un jugador aparece aca si pasaron mas de 10 dias desde la ultima vez que alcanzo el 90% de su propia velocidad maxima registrada en la temporada.</div>
+    <div id="speed-alert-container" class="speed-alert-card"></div>
 
     <div class="section-label"><div class="bar"></div><h2>Volumen semanal</h2><div class="desc">Distancia total (columnas) y esfuerzos explosivos (linea)</div></div>
     <div class="chart-card">

@@ -340,6 +340,59 @@ function renderProximoPartido(){
   widget.style.display = 'flex';
 }
 
+/* ============ ALERTA DE VELOCIDAD (sin pico de temporada en +10 dias) ============ */
+function renderSpeedAlert(){
+  const container = document.getElementById('speed-alert-container');
+  if(!container || !DATASET || DATASET.length===0) return;
+
+  const temporadas = [...new Set(DATASET.map(r=>r.Temporada))];
+  const currentSeason = temporadas.reduce((max,t)=> (t>max ? t : max), temporadas[0]);
+  const seasonData = DATASET.filter(r=>r.Temporada===currentSeason && r.MaxVel>0);
+
+  const byPlayer = {};
+  seasonData.forEach(r=>{
+    if(!byPlayer[r.Jugador]) byPlayer[r.Jugador] = [];
+    byPlayer[r.Jugador].push(r);
+  });
+
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+
+  const alerts = [];
+  Object.entries(byPlayer).forEach(([jugador, rows])=>{
+    const seasonMaxVel = Math.max(...rows.map(r=>r.MaxVel));
+    if(seasonMaxVel<=0) return;
+    const threshold = seasonMaxVel*0.9;
+    const qualifying = rows
+      .filter(r=>r.MaxVel>=threshold)
+      .sort((a,b)=> parseLocalDate(b.Fecha)-parseLocalDate(a.Fecha));
+    if(qualifying.length===0) return;
+    const lastHit = qualifying[0];
+    const diasSince = Math.floor((hoy - parseLocalDate(lastHit.Fecha)) / 86400000);
+    if(diasSince>10){
+      alerts.push({jugador, diasSince, lastFecha: lastHit.Fecha, seasonMaxVel, threshold});
+    }
+  });
+
+  if(alerts.length===0){
+    container.innerHTML = `<div class="speed-alert-ok">\u2705 Todos los jugadores con datos de velocidad en la temporada ${currentSeason} alcanzaron al menos el 90% de su pico personal en los ultimos 10 dias.</div>`;
+    return;
+  }
+
+  alerts.sort((a,b)=> b.diasSince-a.diasSince);
+
+  container.innerHTML = alerts.map(a=>{
+    const badgeClass = a.diasSince>=21 ? '' : 'warn-mid';
+    return `<div class="speed-alert-item">
+      <div class="speed-alert-jugador">${a.jugador}</div>
+      <div class="speed-alert-detail">
+        <span class="speed-alert-dias ${badgeClass}">${a.diasSince} dias</span>
+        sin alcanzar el 90% (${fmt1(a.threshold)} km/h) de su pico de temporada (${fmt1(a.seasonMaxVel)} km/h) &middot; ultima vez: ${fmtDate(a.lastFecha)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function shortName(name){
   const parts = name.trim().split(/\s+/);
   if(parts.length===1) return parts[0];
@@ -1773,6 +1826,7 @@ function handleFile(file){
       populateFilters();
       try{ initComparisonSelectors(); }catch(e){ console.error('comparison selectors error', e); }
       renderAll();
+      try{ renderSpeedAlert(); }catch(e){ console.error('speed alert error', e); }
     } catch(err){
       alert('No se pudo procesar el archivo. Verifique que sea una planilla .xlsx con el mismo formato que SIC_Carga.');
       console.error(err);
@@ -1915,6 +1969,7 @@ async function initApp(){
   populateFilters();
   try{ initComparisonSelectors(); }catch(e){ console.error('comparison selectors error', e); }
   try{ renderAll(); }catch(e){ console.error('renderAll error', e); }
+  try{ renderSpeedAlert(); }catch(e){ console.error('speed alert error', e); }
 
   preloadImages().then(()=>{
     try{ renderTop4(getFilterValues()); }catch(e){ console.error('renderTop4 error', e); }
